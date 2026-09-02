@@ -1,0 +1,25 @@
+# Local Growth Engine — local development services.
+# Only Postgres is needed for the current milestone (database schema).
+# Later milestones add: mailcatcher-style email sink, demo-site host, etc.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: lge-db
+    environment:
+      POSTGRES_USER: lge
+      POSTGRES_PASSWORD: lge
+      POSTGRES_DB: lge
+    ports:
+      # Host port can be changed (update DATABASE_URL in .env to match).
+      - '5432:5432'
+    volumes:
+      - lge_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lge -d lge']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  lge_pgdata:
