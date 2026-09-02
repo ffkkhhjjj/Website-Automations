@@ -20,7 +20,8 @@ export interface LeadPriorityInput {
   websiteQualityScore: number; // 0-100 (from the WSQ engine; 0 for NO_WEBSITE)
   businessOpportunityScore: number; // 0-100
   /** 0-100. Default source: icp_fit category from the BOS run. Callers may
-   *  pass their own market-fit score explicitly. */
+   *  pass their own market-fit score explicitly. Inputs are clamped to 0-100
+   *  for the computation AND the persisted snapshot. */
   marketFitScore?: number;
 }
 
@@ -60,7 +61,9 @@ export function scoreLeadPriority(
   return {
     leadPriorityScore,
     classification,
-    inputs: { ...input, marketFitScore: marketFit },
+    // Record the CLAMPED inputs in the snapshot: the DB CHECK constraints
+    // require 0-100, so storing a raw -10/130 would be unrepresentable.
+    inputs: { websiteQualityScore: wsq, businessOpportunityScore: bos, marketFitScore: marketFit },
     weights: { ...weights },
     formulaVersion: 'scoring.lead_priority.formula',
     thresholds: { ...opts.thresholds },
