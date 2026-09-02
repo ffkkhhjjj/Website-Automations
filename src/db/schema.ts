@@ -261,6 +261,22 @@ export const auditActorType = pgEnum('audit_actor_type', [
   'JOB',
 ]);
 
+/** Why a lead was rejected (recorded per rejection for later analytics).
+ *  OPT_OUT / DO_NOT_CONTACT_REQUEST drive the DO_NOT_CONTACT state; the rest
+ *  drive REJECTED. */
+export const rejectionReason = pgEnum('rejection_reason', [
+  'INACTIVE_BUSINESS',
+  'NO_CONTACT_ROUTE',
+  'OUTSIDE_ICP',
+  'EXCELLENT_WEBSITE',
+  'LOW_OPPORTUNITY',
+  'OPT_OUT',
+  'DO_NOT_CONTACT_REQUEST',
+  'BAD_DATA',
+  'DUPLICATE',
+  'OTHER',
+]);
+
 /* ============================================================================
  * AUTH — users, refresh-token sessions, and server-side API keys.
  * Exactly ONE owner user exists (bootstrapped from env, no self-signup).
@@ -1121,5 +1137,31 @@ export const leadStateHistory = pgTable(
   (t) => [
     index('idx_lead_state_history_business_id').on(t.business_id),
     index('idx_lead_state_history_business_created').on(t.business_id, t.created_at),
+  ],
+);
+
+/* ============================================================================
+ * 28. REJECTIONS — why a lead was rejected (REJECTED / DO_NOT_CONTACT).
+ * One row per (business, rejection event); the latest rows are the current
+ * reason set. Kept as a real table so later analytics can aggregate rejection
+ * causes without parsing state-history notes.
+ * ========================================================================== */
+
+export const rejections = pgTable(
+  'rejections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    business_id: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    reason: rejectionReason('reason').notNull(),
+    // Free-text detail of what triggered the rejection (rule name, observed values).
+    detail: jsonb('detail').$type<Record<string, unknown>>(),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('idx_rejections_business_id').on(t.business_id),
+    index('idx_rejections_reason').on(t.reason),
+    index('idx_rejections_created_at').on(t.created_at),
   ],
 );

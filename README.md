@@ -123,6 +123,81 @@ login success (200 + tokens + hashed session row), wrong password (401),
 unauthenticated (401), insufficient API key scope (403), and sufficient scope
 (201). `npx tsc --noEmit` must pass as well.
 
+## Lead lifecycle (state machine: `src/lifecycle/`)
+
+Every lead routes through a strictly-enforced state machine — the platform's
+deterministic backbone. The machine never silently allows a move: a transition
+is legal **iff** it is in `LEAD_TRANSITIONS` (`src/lifecycle/transitions.ts`,
+the single source of truth), otherwise `transition()` throws
+`InvalidTransitionError`.
+
+### Transition map (summary)
+
+```
+DISCOVERED → ENRICHING → ENRICHED → ANALYZING → ANALYZED → QUALIFIED
+          → DEMO_GENERATING → DEMO_READY → OUTREACH_PENDING → CONTACTED
+          → FOLLOWUP_1 → FOLLOWUP_2 → RESPONDED
+RESPONDED → NURTURE | INTERESTED | HOT → SALES_HANDOFF → WON → CUSTOMER
+```
+
+The map also includes the recovery/reverse edges an autonomous system needs:
+retry edges (DEMO_GENERATING → DEMO_GENERATING, DEMO_READY →
+DEMO_GENERATING), back-out edges (SALES_HANDOFF → INTERESTED/HOT/NURTURE,
+INTERESTED → NURTURE, HOT → NURTURE), and the terminal exits:
+
+- **REJECTED** — from ENRICHING/ENRICHED/ANALYZING/ANALYZED/QUALIFIED, and
+  from DEMO_/OUTREACH_* when a rejection rule fires late.
+- **DO_NOT_CONTACT** — from CONTACTED/FOLLOWUP_*/RESPONDED/NURTURE/INTERESTED/
+  HOT/SALES_HANDOFF on opt-out or a do-not-contact request.
+- **LOST** — from SALES_HANDOFF/INTERESTED/HOT (deal lost).
+- **WON → CUSTOMER** — terminal for the lifecycle.
+
+Terminal states (REJECTED, DO_NOT_CONTACT, LOST, CUSTOMER) have **no outgoing
+edges**; `WON` only advances to `CUSTOMER`.
+
+### Services
+
+- `transition(businessId, toState, { reason?, actor? })` — validates against the
+  map and writes `businesses.lifecycle_state` + a `lead_state_history` row +
+  an `audit_logs` row (`action='LEAD_STATE_CHANGED'`) **in one DB transaction**.
+  Returns the new state. Throws on illegal moves, unknown businesses, or no-ops.
+- `reject(businessId, { reasons[], reason?, actor? })` — records one `rejections`
+  row per reason (typed `rejection_reason` enum, JSONB detail), then transitions
+  to **REJECTED**, or **DO_NOT_CONTACT** when a reason is `OPT_OUT` /
+  `DO_NOT_CONTACT_REQUEST` — same transactional guarantees as `transition`.
+
+### Rejection rules (deterministic, `rejection-rules.ts`)
+
+A pure evaluator `evaluateRejectionRules(attributes, context, config)` returns
+the triggered reasons for a business given its current data:
+
+| Rule | Fires when |
+| --- | --- |
+| `OUTSIDE_ICP` | `icpMatch === false` |
+| `INACTIVE_BUSINESS` | `business_status` ∈ configured `inactive_statuses` (CLOSED / PERMANENTLY_CLOSED / TEMPORARILY_CLOSED) |
+| `NO_CONTACT_ROUTE` | no verified email/phone on file, or `contactability_score < min_contactability_score` |
+| `EXCELLENT_WEBSITE` | classification `EXCELLENT`, or `website_quality_score ≥ excellent_website_min` (90) |
+| `LOW_OPPORTUNITY` | `business_opportunity_score < min_opportunity_score` (50) |
+
+Thresholds are **config, not env** — read from `system_settings`
+(`scoring.rejection.thresholds`, seeded; conservative master-spec defaults if
+the key is missing). The scoring engines arrive in a later brief, so the
+evaluator accepts scores/classification as typed inputs and never computes them.
+
+Explicit/manual reasons (`OPT_OUT`, `DO_NOT_CONTACT_REQUEST`, `BAD_DATA`,
+`DUPLICATE`, `OTHER`) come from owner/pipeline signals and go through the
+rejection service, not this evaluator.
+
+### Extending
+
+- **Add a transition** — edit `LEAD_TRANSITIONS` (the map is typed, so any new
+  source state must have an entry), then update the README summary + the
+  map/row-count tests in `test/transitions.test.ts`.
+- **Add a rejection rule** — add the reason to the `rejection_reason` enum
+  (schema + migration), implement it in `evaluateRejectionRules`, and test it
+  in `test/rejection-rules.test.ts`.
+- **Thresholds** always land in `system_settings`; code only supplies defaults.
+
 ## Requires configuration
 
 - **`DATABASE_URL` (production)** — point at a managed Postgres before deploying.
@@ -162,14 +237,16 @@ its import path stays a swappable interface.
 - **`lead_state_history`** records every lifecycle transition, so the state-machine
   brief lands with full audit history, not just a current-state column.
 
-## Schema inventory (27 tables)
+## Schema inventory (31 tables)
 
-`businesses`, `contacts`, `websites`, `website_analyses`, `lead_scores`, `demos`,
+`users`, `user_sessions`, `api_keys` (auth, migration 0001), then `businesses`,
+`contacts`, `websites`, `website_analyses`, `lead_scores`, `demos`,
 `outreach_campaigns`, `outreach_messages`, `followups`, `conversations`,
-`conversation_messages`, `sales_opportunities`, `customers`, `customer_onboarding`,
-`production_websites`, `website_versions`, `domains`, `subscriptions`, `payments`,
-`tasks`, `exceptions`, `audit_logs`, `system_settings`, `scoring_versions`,
-`templates`, `metrics`, `lead_state_history`.
+`conversation_messages`, `sales_opportunities`, `customers`,
+`customer_onboarding`, `production_websites`, `website_versions`, `domains`,
+`subscriptions`, `payments`, `tasks`, `exceptions`, `audit_logs`,
+`system_settings`, `scoring_versions`, `templates`, `metrics`,
+`lead_state_history`, `rejections` (0002).
 
 ## License / status
 

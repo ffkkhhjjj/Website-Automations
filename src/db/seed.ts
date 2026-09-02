@@ -65,6 +65,18 @@ const DEFAULT_SETTINGS = [
     is_feature_flag: false,
   },
   {
+    key: 'scoring.rejection.thresholds',
+    value: {
+      min_opportunity_score: 50,
+      excellent_website_min: 90,
+      min_contactability_score: 40,
+      inactive_statuses: ['CLOSED', 'PERMANENTLY_CLOSED', 'TEMPORARILY_CLOSED'],
+    },
+    type: 'json',
+    description: 'Automated rejection rule thresholds (lifecycle): opportunity below min → LOW_OPPORTUNITY; website score at/above excellent_website_min → EXCELLENT_WEBSITE; contactability below min or no route → NO_CONTACT_ROUTE; listed statuses → INACTIVE_BUSINESS.',
+    is_feature_flag: false,
+  },
+  {
     key: 'outreach.followup.day_offsets',
     value: [3, 7],
     type: 'array',

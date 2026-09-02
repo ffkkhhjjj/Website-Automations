@@ -4,8 +4,8 @@
  *   npm run db:verify
  *
  * Prints PASS/FAIL for:
- *  - all 27 expected tables exist
- *  - all 28 expected enum types exist
+ *  - all 31 expected tables exist (incl. auth tables)
+ *  - all 31 expected enum types exist (incl. auth enums + rejection_reason)
  *  - key indexes exist (businesses by lifecycle state, messages by campaign, events by date)
  *  - FK constraints exist (contacts.business_id, lead_scores.scoring_version, ...)
  *  - score CHECK constraints exist (0-100)
@@ -23,15 +23,19 @@ type Row = Record<string, unknown>;
 const row = (r: Row) => r; // identity, documents intent
 
 const EXPECTED_TABLES = [
+  // auth tables (migration 0001)
+  'users', 'user_sessions', 'api_keys',
+  // business tables (0000 + 0002)
   'businesses', 'contacts', 'websites', 'website_analyses', 'lead_scores',
   'demos', 'outreach_campaigns', 'outreach_messages', 'followups', 'conversations',
   'conversation_messages', 'sales_opportunities', 'customers', 'customer_onboarding',
   'production_websites', 'website_versions', 'domains', 'subscriptions', 'payments',
   'tasks', 'exceptions', 'audit_logs', 'system_settings', 'scoring_versions',
-  'templates', 'metrics', 'lead_state_history',
+  'templates', 'metrics', 'lead_state_history', 'rejections',
 ];
 
 const EXPECTED_ENUMS = [
+  'user_role', 'api_key_scope', // auth enums (migration 0001)
   'lead_lifecycle_state', 'website_status', 'website_classification',
   'lead_classification', 'demo_status', 'campaign_status', 'message_status',
   'followup_status', 'conversation_status', 'message_direction',
@@ -40,7 +44,7 @@ const EXPECTED_ENUMS = [
   'domain_status', 'subscription_status', 'subscription_interval',
   'payment_status', 'task_status', 'exception_priority', 'exception_status',
   'scoring_type', 'template_type', 'business_operational_status',
-  'contact_status', 'audit_actor_type',
+  'contact_status', 'audit_actor_type', 'rejection_reason',
 ];
 
 let failures = 0;
@@ -82,6 +86,7 @@ async function run() {
     'idx_followups_status_scheduled_at', 'idx_audit_logs_entity', 'idx_audit_logs_created_at',
     'idx_tasks_status_scheduled_at', 'idx_exceptions_status_priority',
     'idx_website_analyses_analyzed_at', 'idx_lead_scores_priority', 'idx_lead_scores_classification',
+    'idx_lead_state_history_business_id', 'idx_rejections_business_id',
   ];
   for (const i of requiredIndexes) check(`index ${i}`, indexNames.has(i));
 
