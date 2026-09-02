@@ -8,6 +8,13 @@
       "when": 1788359302195,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788360035363,
+      "tag": "0001_good_imperial_guard",
+      "breakpoints": true
     }
   ]
 }
