@@ -4,8 +4,8 @@
  *   npm run db:verify
  *
  * Prints PASS/FAIL for:
- *  - all 28 expected tables exist
- *  - all 29 expected enum types exist
+ *  - all 31 expected tables exist (incl. auth tables)
+ *  - all 31 expected enum types exist (incl. auth enums + rejection_reason)
  *  - key indexes exist (businesses by lifecycle state, messages by campaign, events by date)
  *  - FK constraints exist (contacts.business_id, lead_scores.scoring_version, ...)
  *  - score CHECK constraints exist (0-100)
@@ -23,6 +23,9 @@ type Row = Record<string, unknown>;
 const row = (r: Row) => r; // identity, documents intent
 
 const EXPECTED_TABLES = [
+  // auth tables (migration 0001)
+  'users', 'user_sessions', 'api_keys',
+  // business tables (0000 + 0002)
   'businesses', 'contacts', 'websites', 'website_analyses', 'lead_scores',
   'demos', 'outreach_campaigns', 'outreach_messages', 'followups', 'conversations',
   'conversation_messages', 'sales_opportunities', 'customers', 'customer_onboarding',
@@ -32,6 +35,7 @@ const EXPECTED_TABLES = [
 ];
 
 const EXPECTED_ENUMS = [
+  'user_role', 'api_key_scope', // auth enums (migration 0001)
   'lead_lifecycle_state', 'website_status', 'website_classification',
   'lead_classification', 'demo_status', 'campaign_status', 'message_status',
   'followup_status', 'conversation_status', 'message_direction',
