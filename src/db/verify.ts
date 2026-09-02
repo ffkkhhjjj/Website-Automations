@@ -17,6 +17,11 @@ import 'dotenv/config';
 import { sql } from 'drizzle-orm';
 import { db, pool } from './client.js';
 
+// drizzle db.execute returns rows as Record<string, unknown> — row() narrows
+// to the shape we query for.
+type Row = Record<string, unknown>;
+const row = (r: Row) => r; // identity, documents intent
+
 const EXPECTED_TABLES = [
   'businesses', 'contacts', 'websites', 'website_analyses', 'lead_scores',
   'demos', 'outreach_campaigns', 'outreach_messages', 'followups', 'conversations',
@@ -46,12 +51,16 @@ function check(name: string, ok: boolean, detail = '') {
   console.log(`[${mark}] ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
+function keyNames(rows: Row[], key: string): string[] {
+  return rows.map((r) => String(r[key]));
+}
+
 async function run() {
   const tables = await db.execute(sql`
     SELECT tablename FROM pg_catalog.pg_tables
     WHERE schemaname = 'public' AND tablename NOT LIKE 'drizzle%'
   `);
-  const tableNames = new Set(tables.rows.map((r: { tablename: string }) => r.tablename));
+  const tableNames = new Set(keyNames(tables.rows, 'tablename'));
   for (const t of EXPECTED_TABLES) check(`table ${t}`, tableNames.has(t));
   check('extra tables beyond expected', tableNames.size === EXPECTED_TABLES.length, `${tableNames.size} total`);
 
@@ -60,13 +69,13 @@ async function run() {
     JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
     WHERE n.nspname = 'public' AND t.typtype = 'e'
   `);
-  const enumNames = new Set(enums.rows.map((r: { typname: string }) => r.typname));
+  const enumNames = new Set(keyNames(enums.rows, 'typname'));
   for (const e of EXPECTED_ENUMS) check(`enum ${e}`, enumNames.has(e));
 
   const indexes = await db.execute(sql`
     SELECT indexname FROM pg_catalog.pg_indexes WHERE schemaname = 'public'
   `);
-  const indexNames = new Set(indexes.rows.map((r: { indexname: string }) => r.indexname));
+  const indexNames = new Set(keyNames(indexes.rows, 'indexname'));
   const requiredIndexes = [
     'idx_businesses_lifecycle_state', 'idx_businesses_state_city', 'idx_businesses_source',
     'idx_outreach_messages_campaign_id', 'idx_outreach_messages_status',
@@ -81,7 +90,7 @@ async function run() {
     JOIN pg_catalog.pg_namespace n ON n.oid = c.connamespace
     WHERE n.nspname = 'public'
   `);
-  const constraintNames = new Set(constraints.rows.map((r: { conname: string }) => r.conname));
+  const constraintNames = new Set(keyNames(constraints.rows, 'conname'));
   const requiredConstraints = [
     'contacts_business_id_businesses_id_fk', 'lead_scores_scoring_version_scoring_versions_id_fk',
     'website_analyses_analysis_version_scoring_versions_id_fk',
@@ -108,16 +117,17 @@ async function run() {
   check(
     'scoring_versions v1 all active',
     activePerType.rows.length === 3,
-    `${activePerType.rows.map((r: { score_type: string }) => r.score_type).join(', ')}`,
+    `${activePerType.rows.map((r) => String(r.score_type)).join(', ')}`,
   );
 
   console.log('\n--- seeded system_settings ---');
-  for (const r of settings.rows as Array<{ key: string; type: string; value: unknown }>) {
-    console.log(`  ${r.key} (${r.type}) = ${typeof r.value === 'object' ? JSON.stringify(r.value) : String(r.value)}`);
+  for (const r of settings.rows) {
+    const v = r.value;
+    console.log(`  ${String(r.key)} (${String(r.type)}) = ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`);
   }
   console.log('\n--- seeded scoring_versions ---');
-  for (const r of versions.rows as Array<{ score_type: string; version: number; is_active: boolean; weights: unknown }>) {
-    console.log(`  ${r.score_type} v${r.version} active=${r.is_active} weights=${JSON.stringify(r.weights)}`);
+  for (const r of versions.rows) {
+    console.log(`  ${String(r.score_type)} v${String(r.version)} active=${String(r.is_active)} weights=${JSON.stringify(r.weights)}`);
   }
 
   await pool.end();
