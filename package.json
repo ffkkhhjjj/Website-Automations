@@ -14,7 +14,10 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:verify": "tsx src/db/verify.ts",
     "db:reset": "drizzle-kit drop && drizzle-kit push",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "auth:bootstrap": "tsx src/auth/bootstrap-owner.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.2.0",

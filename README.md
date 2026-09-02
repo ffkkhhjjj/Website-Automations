@@ -53,10 +53,75 @@ All variables are documented in [.env.example](.env.example). Summary:
 | `DATABASE_URL` | default provided | Postgres connection string |
 | `DATABASE_SSL` / `DATABASE_POOL_MAX` | no | production SSL / pool tuning |
 | `PORT`, `NODE_ENV` | no | HTTP server (later brief) |
-| `SESSION_SECRET` | no | auth (later brief) |
+| `OWNER_EMAIL`, `OWNER_PASSWORD` | for `auth:bootstrap` | single owner account bootstrap |
+| `JWT_SECRET` | production | access-token signing secret |
+| `JWT_EXPIRES_IN`, `REFRESH_TOKEN_TTL_DAYS` | no | token lifetimes |
+| `AUTH_*_RATE_LIMIT_*` | no | per-IP rate limits on auth routes |
 | `ENRICHMENT_API_KEY`, `EMAIL_API_KEY`, `DEMO_HOSTING_API_KEY`, `DEPLOYMENT_API_KEY` | no | integration credentials (later briefs) |
 
 Nothing beyond the database is required to run, migrate, seed, and verify today.
+
+## Authentication & authorization (auth module: `src/auth/`)
+
+The platform has **no public signup**. Credentials come from two places:
+the single `OWNER` user account, and server-side API keys for service-to-service
+calls.
+
+### Bootstrap the owner account
+```bash
+cp .env.example .env   # set OWNER_EMAIL and OWNER_PASSWORD; generate JWT_SECRET
+npm run auth:bootstrap # tsx src/auth/bootstrap-owner.ts
+```
+- Creates one `OWNER` user from env vars; the password is **bcrypt-hashed
+  (12 rounds)**, never stored or logged in plaintext.
+- **Idempotent**: if `OWNER_EMAIL` already exists it skips and leaves the
+  existing account untouched - bootstrap never resets a password.
+- Fails with a clear message (exit 1) if env vars are missing or the password
+  is weak (< 12 chars by default; `OWNER_MIN_PASSWORD_LENGTH`).
+
+### How auth works
+- `POST /auth/login` (`{email, password}`) -> JWT access token + refresh token.
+  Access tokens are short-lived (default 15m, `JWT_EXPIRES_IN`).
+- `POST /auth/refresh` (`{refresh_token}`) -> **rotates** the refresh token: the
+  old session row is revoked and a new one issued. A replayed refresh token is
+  rejected. Only the SHA-256 hash of the refresh token is stored (`user_sessions`).
+- `POST /auth/logout` (`{refresh_token}`) -> revokes the session (idempotent 204).
+- `GET /auth/me` -> current principal (user or API key); requires a valid
+  credential. `GET /auth/health` is public.
+- Login and refresh endpoints are rate-limited per IP (defaults in `.env.example`).
+
+### API keys
+Server-side keys are created at runtime - no key is generated from env:
+- `POST /auth/keys` `{name, scope}` with `Authorization: Bearer <admin-credential>`
+  (an `admin` API key, or the owner's access token). Scopes: `read` | `admin`.
+- `POST /auth/keys/:id/revoke` deactivates a key immediately.
+- The raw key (`lge_...`) is returned **exactly once** at creation; only its
+  SHA-256 hash is stored (`api_keys`), so a leaked DB is not a leaked key set.
+- Callers pass the key as `Authorization: Bearer lge_<...>`.
+
+### Protected-route semantics
+- `401` - missing/invalid/expired credentials (or replay of a rotated token).
+- `403` - valid credential but insufficient scope (e.g. `read` key on an
+  admin-only route).
+- Error bodies are generic (`{error:{code,message}}`); no internals are leaked.
+- The owner (role `OWNER`) has full access; API keys are gated by scope.
+
+### Auth audit trail
+Every auth event (login success/failure, token refresh, logout, key
+create/revoke, bootstrap create/skip) is written to `audit_logs` with
+`source='auth'`, the actor type (`USER`/`API`/`SYSTEM`), actor id, action,
+entity type/id, and `before`/`after` state where relevant.
+
+### Tests
+```bash
+npm run db:migrate   # first time (dev DB)
+npm test             # vitest run - integration tests against a throwaway DB
+```
+Tests create a dedicated `lge_auth_test` database (migrations applied once via
+`test/global-setup.ts`), then exercise the full stack through Fastify `inject()`:
+login success (200 + tokens + hashed session row), wrong password (401),
+unauthenticated (401), insufficient API key scope (403), and sufficient scope
+(201). `npx tsc --noEmit` must pass as well.
 
 ## Requires configuration
 
