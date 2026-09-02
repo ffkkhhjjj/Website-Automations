@@ -262,6 +262,91 @@ export const auditActorType = pgEnum('audit_actor_type', [
 ]);
 
 /* ============================================================================
+ * AUTH — users, refresh-token sessions, and server-side API keys.
+ * Exactly ONE owner user exists (bootstrapped from env, no self-signup).
+ * API keys are stored hashed (sha256) at rest — the raw key is shown once at
+ * creation, never persisted, never exposed to the frontend. Sessions store
+ * the refresh-token hash so a stolen DB cannot forge refresh tokens.
+ * ========================================================================== */
+
+/** Roles for the authorization matrix. OWNER = full admin; the only user role. */
+export const userRole = pgEnum('user_role', ['OWNER']);
+
+/** Remaining auth-only enum. Guarded by OWASP-style validation (KISS). */
+export const apiKeyScopeType = pgEnum('api_key_scope', ['read', 'admin']);
+
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    // bcrypt hash — never plaintext. A plaintext email/password is never stored.
+    password_hash: text('password_hash').notNull(),
+    role: userRole('role').default('OWNER').notNull(),
+    is_active: boolean('is_active').default(true).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique('u_users_email').on(t.email),
+  ],
+);
+
+/** Server-side session records. Only the refresh-token hash is stored. */
+export const userSessions = pgTable(
+  'user_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    user_id: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // sha256 hex of the refresh token — never store the token itself.
+    refresh_token_hash: text('refresh_token_hash').notNull(),
+    user_agent: text('user_agent'),
+    ip_address: text('ip_address'),
+    expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revoked_at: timestamp('revoked_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('u_user_sessions_refresh_token_hash').on(t.refresh_token_hash),
+    index('idx_user_sessions_user_id').on(t.user_id),
+  ],
+);
+
+/** Server-side API keys for service-to-service calls. Only the sha256 of the
+ *  raw key is stored; the raw key is returned exactly once at creation. */
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Human-readable label, e.g. 'orchestrator-prod'.
+    name: text('name').notNull(),
+    // Prefix (e.g. 'lge_1a2b3c') shown in the UI for identification; raw key never.
+    prefix: text('prefix').notNull(),
+    // sha256 hex of the raw key — the only representation kept at rest.
+    key_hash: text('key_hash').notNull(),
+    scope: apiKeyScopeType('scope').notNull(),
+    // Comma-separated service/route identifiers, e.g. 'jobs,scores'.
+    allowed_resources: text('allowed_resources'),
+    is_active: boolean('is_active').default(true).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }),
+    revoked_at: timestamp('revoked_at', { withTimezone: true }),
+    expires_at: timestamp('expires_at', { withTimezone: true }),
+  },
+  (t) => [
+    unique('u_api_keys_key_hash').on(t.key_hash),
+    unique('u_api_keys_name').on(t.name),
+    index('idx_api_keys_prefix').on(t.prefix),
+  ],
+);
+
+/* ============================================================================
  * SHARED TYPES (documentation of JSONB shapes)
  * ========================================================================== */
 
