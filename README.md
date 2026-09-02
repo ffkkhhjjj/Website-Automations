@@ -198,6 +198,75 @@ rejection service, not this evaluator.
   in `test/rejection-rules.test.ts`.
 - **Thresholds** always land in `system_settings`; code only supplies defaults.
 
+## Scoring engines (`src/scoring/`)
+
+Three deterministic engines produce a **0–100 lead priority** per business. The
+scoring run is invoked **by the pipeline** and **never mutates lifecycle state
+itself** — the orchestrator writes analyses/scores/audit rows only; transitions
+stay the state machine's job.
+
+### What is deterministic
+
+- **Website technical checks** (`website-checks.ts`) — 12 checks parse the
+  observed crawl input (HTTPS, HTTP 2xx, mobile viewport, title, meta
+  description, single H1, CTA, contact route, NAP consistency, internal links,
+  no broken links, page-speed proxy). Every check emits its own **evidence**
+  (observed URL, snippet, status code, timing); a check that cannot run from the
+  data returns `NOT_RUN`, never a fabricated pass/fail.
+- **Business opportunity signals** (`business-opportunity.ts`) — category scores
+  derive only from real provided signals (status, NAP, reviews, services,
+  contactability, industry/state vs target config). Absent signals are scored
+  conservatively and recorded as "not observed" — the engine never invents
+  revenue, employee counts, age, or licenses.
+- **Lead priority formula** (`lead-priority.ts`) — `(100 − WSQ) × 0.45 + BOS ×
+  0.40 + market_fit × 0.15`, inputs clamped to 0–100, market-fit defaulting to
+  the BOS `icp_fit` category.
+
+### What is AI-ready-swappable
+
+The five **subjective** website categories — clarity, copy quality, visual
+quality, trust presentation, conversion quality — are evaluated through the
+`AiSubjectiveEvaluator` interface (`subjective.ts`), never by hard-coded
+guesswork in the technical path. The shipped **`DeterministicFallbackEvaluator`**
+derives the same categories from objective signals with a fixed, documented
+mapping (same inputs → same outputs), so the pipeline is fully functional today
+with zero AI. A real AI evaluator is a later **drop-in behind the same
+interface** and is **requires-configuration**: it is only used when
+`ai.evaluator.provider/model/prompt` (Settings) *and* the `AI_EVALUATOR_API_*`
+env credentials are present (see `.env.example`) — no fake integration.
+
+### Classification bands
+
+| Score | Website quality (`website_classification`) | Lead priority (`lead_classification`) |
+| --- | --- | --- |
+| 80+ / ≥90 | EXCELLENT (≥90) | HIGH_PRIORITY (≥80) |
+| 65–79 / 75–89 | GOOD (≥75) | SECONDARY (≥65) |
+| 50–64 / 60–74 | AVERAGE (≥60) | REVIEW (≥50) |
+| 40–59 | WEAK (≥40) | — |
+| <40 | VERY_WEAK | REJECT (<50) |
+
+`NO_WEBSITE` → WSQ **0** with classification `NO_WEBSITE` (no site observed).
+Website bands are fixed by the spec; lead thresholds are configurable in
+`system_settings`.
+
+### Versioning
+
+Weights/thresholds live in `system_settings` (owner-editable) with `scoring_versions`
+as the immutable, versioned weight snapshots. Every analysis references the
+**active `scoring_versions` row by FK** (`analysis_version` on
+`website_analyses`, `scoring_version` on `lead_scores`), and each `lead_scores`
+row snapshots the formula inputs/weights/thresholds inside `formula_fields` —
+so re-scoring keeps full history and later weight changes never rewrite old rows.
+
+### Orchestrator
+
+`scoreBusiness(businessId, opts)` (`orchestrator.ts`) is the only entry point
+that runs scoring end-to-end: it loads the business + websites, runs the
+engines (a business with no website gets WSQ 0 / `NO_WEBSITE`), then persists —
+in **one transaction** — a `website_analyses` row per analyzed website, **one
+`lead_scores` row per run**, and `audit_logs` entries (`WEBSITE_ANALYZED` /
+`LEAD_SCORED`, `source='scoring'`). Lifecycle state is untouched.
+
 ## Requires configuration
 
 - **`DATABASE_URL` (production)** — point at a managed Postgres before deploying.
