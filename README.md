@@ -342,6 +342,89 @@ These integrations are intentionally **not faked**: until a real credential is
 supplied and the matching provider module exists, the feature is disabled and
 its import path stays a swappable interface.
 
+## External integrations (`src/integrations/`)
+
+The platform talks to external services only through typed interfaces in
+`src/integrations/types.ts`, and selects which provider instance to use through
+the registry in `src/integrations/registry.ts`. **No vendor is fixed anywhere.**
+Each module exists today as an interface plus an explicit
+`requires-configuration` marker — nothing silently pretends to work.
+
+### Architecture
+
+```
+pipeline code ──► IntegrationRegistry.get('email') ──► EmailProvider
+                        │  (selection from system_settings:
+                        │   integrations.<module>.provider)
+                        ▼
+              NotConfiguredProvider ── THROWS on use until a real
+              provider is implemented, selected, AND its credentials
+              are present in env (no fake success, ever)
+```
+
+- **Interfaces** (`types.ts`): `EnrichmentProvider` (return only fields
+  actually found — never fabricate), `EmailProvider` (async; real service
+  message id required on success, explicit `ok:false` failure otherwise),
+  `DemoHostingProvider` (publish a demo to a unique URL; optionally record a
+  view), `DeploymentProvider` (deploy a production site and return its public
+  URL). Payloads are typed and transport-agnostic.
+- **Registry** (`registry.ts`): maps module → active provider. Provider
+  selection is configurable via `system_settings` keys
+  `integrations.<module>.provider` (seeded to `"none"` — see
+  `src/db/seed-settings.ts`). Until a real provider is selected, the module
+  serves `NotConfiguredProvider` (`not-configured.ts`), whose methods throw
+  a clear `requires configuration: <env vars>` `NotConfiguredError`.
+- **Honest status** (`routes.ts`): `GET /api/integrations/status` (owner JWT
+  or read-scope API key; 401 otherwise) returns per module
+  `{ module, provider, configured, requiresConfiguration, missingEnvVars }`.
+  `configured` is true **only** when a real provider is registered AND its
+  credential env vars are present — never for a stub or for env alone.
+- **Boundary**: this module never touches the lead lifecycle and never mutates
+  businesses; it is a read/status surface plus swappable transport seams.
+- **No network calls** anywhere in this module (pure interfaces + registry +
+  status endpoint), so it is fully deterministic and testable offline.
+
+### Env vars per module
+
+| Module | Setting key (seeded) | Env vars a provider needs | Reports `configured` when |
+| --- | --- | --- | --- |
+| `enrichment` | `integrations.enrichment.provider` | `ENRICHMENT_API_KEY` | provider registered + selected + key present |
+| `email` | `integrations.email.provider` | `EMAIL_API_KEY` | provider registered + selected + key present |
+| `demo_hosting` | `integrations.demo_hosting.provider` | `DEMO_HOSTING_API_KEY` | provider registered + selected + key present |
+| `deployment` | `integrations.deployment.provider` | `DEPLOYMENT_API_KEY` | provider registered + selected + key present |
+
+A future provider may need more env (e.g. an SMTP provider could add
+`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` alongside `EMAIL_API_KEY`) —
+that provider lists them in its own required-env set so `missingEnvVars`
+stays honest. The exact names are documented per provider as they land; the
+table above is the baseline every provider starts from.
+
+### Adding a real provider (later brief)
+
+1. Implement the module's interface in `src/integrations/providers/`
+   (e.g. `providers/acme-email.ts` exporting a class implementing
+   `EmailProvider`).
+2. Register it in `src/integrations/registry.ts` (the `ProviderRegistry`
+   map) — keep `NotConfiguredProvider` as the fallback for modules without a
+   provider.
+3. Set the module's settings key to the provider id
+   (`PUT /api/settings/integrations.email.provider` with value
+   `"acme-email"`) and put its credential in env.
+4. The status endpoint now reports the provider id, `configured: true`,
+   `requiresConfiguration: false`, empty `missingEnvVars`.
+
+Until all three steps hold, the module stays honestly unconfigured and its
+methods throw — the registry never fakes a connection.
+
+### Tests
+
+`test/integrations.test.ts` — registry honesty (all modules unconfigured with
+the documented missing env), NotConfiguredProvider throwing on every method,
+a test-only concrete stub provider satisfying the interface (registered via
+`src/integrations/test-hooks.ts`, which is **not** exported from the module
+index so production code can't use it), and the status endpoint's 401/auth +
+honest payload behavior.
+
 ## Database design decisions
 
 - **Enums**: real Postgres `ENUM` types (`pgEnum`), used consistently for every
