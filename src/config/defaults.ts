@@ -123,3 +123,20 @@ export interface AiEvaluatorConfig {
   promptRef?: string;
 }
 export const DEFAULT_AI_EVALUATOR_CONFIG: AiEvaluatorConfig = { configured: false };
+
+/**
+ * Integration provider selection defaults (integrations.<module>.provider).
+ * All modules default to "none": no provider selected → the registry serves
+ * NotConfiguredProvider (methods throw). A future vendor id replaces "none"
+ * when a real provider is implemented + registered + credentials exist in env.
+ */
+export type IntegrationProviderId = 'none' | string;
+export const DEFAULT_INTEGRATION_PROVIDERS: Record<
+  'enrichment' | 'email' | 'demo_hosting' | 'deployment',
+  IntegrationProviderId
+> = {
+  enrichment: 'none',
+  email: 'none',
+  demo_hosting: 'none',
+  deployment: 'none',
+};

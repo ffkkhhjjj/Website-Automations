@@ -156,6 +156,34 @@ const DEFAULT_SETTINGS: SeedSetting[] = [
     description: 'Feature flag: billing/subscriptions (later brief; platform not yet live).',
     is_feature_flag: true,
   },
+  {
+    key: 'integrations.enrichment.provider',
+    value: 'none',
+    type: 'string',
+    description: 'Enrichment provider selection: "none" (default) or a future vendor id. Requires ENRICHMENT_API_KEY in env.',
+    is_feature_flag: false,
+  },
+  {
+    key: 'integrations.email.provider',
+    value: 'none',
+    type: 'string',
+    description: 'Email provider selection: "none" (default) or a future vendor id. Requires EMAIL_API_KEY in env.',
+    is_feature_flag: false,
+  },
+  {
+    key: 'integrations.demo_hosting.provider',
+    value: 'none',
+    type: 'string',
+    description: 'Demo hosting provider selection: "none" (default) or a future vendor id. Requires DEMO_HOSTING_API_KEY in env.',
+    is_feature_flag: false,
+  },
+  {
+    key: 'integrations.deployment.provider',
+    value: 'none',
+    type: 'string',
+    description: 'Deployment provider selection: "none" (default) or a future vendor id. Requires DEPLOYMENT_API_KEY in env.',
+    is_feature_flag: false,
+  },
 ];
 
 export interface SeedSettingsOptions {
