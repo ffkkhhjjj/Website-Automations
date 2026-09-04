@@ -7,6 +7,7 @@
  * - middleware: Fastify preHandlers (JWT OR API key, scope guard)
  * - client: Fastify app builder + auth routes
  * - bootstrap-owner: env-driven single-owner bootstrap CLI
+ * - bootstrap-owner-fn: callable idempotent bootstrap (used by the app server)
  */
 export * from './password';
 export * from './tokens';
@@ -15,3 +16,4 @@ export * from './audit';
 export * from './middleware';
 export * from './client';
 export * from './config';
+export * from './bootstrap-owner-fn';
