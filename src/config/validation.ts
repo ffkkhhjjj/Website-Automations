@@ -103,6 +103,16 @@ function validateKnown(key: string, value: unknown): ValidationResult {
   if (key === 'business.hours') {
     return validateNumericRecord(key, value);
   }
+  if (key === 'integrations.enrichment.provider' || key === 'integrations.email.provider' || key === 'integrations.demo_hosting.provider' || key === 'integrations.deployment.provider' || key === 'integrations.discovery.provider') {
+    return typeof value === 'string' && value.trim().length > 0
+      ? ok
+      : { ok: false, message: 'expected a non-empty provider id string ("none" to disable)' };
+  }
+  if (key === 'discovery.batch_size' || key === 'discovery.max_attempts' || key === 'discovery.schedule_interval_minutes' || key === 'discovery.rate_limit_per_minute') {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0
+      ? ok
+      : { ok: false, message: 'expected a non-negative integer' };
+  }
   return ok; // unknown per-key schema: only type-level checks apply (API rejects unknown keys anyway)
 }
 

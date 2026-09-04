@@ -184,6 +184,41 @@ const DEFAULT_SETTINGS: SeedSetting[] = [
     description: 'Deployment provider selection: "none" (default) or a future vendor id. Requires DEPLOYMENT_API_KEY in env.',
     is_feature_flag: false,
   },
+  {
+    key: 'integrations.discovery.provider',
+    value: 'none',
+    type: 'string',
+    description: 'Discovery provider selection: "none" (default) or a future vendor id. Requires DISCOVERY_API_KEY in env.',
+    is_feature_flag: false,
+  },
+  {
+    key: 'discovery.batch_size',
+    value: 50,
+    type: 'number',
+    description: 'Number of provider records ingested per batch transaction during a discovery job.',
+    is_feature_flag: false,
+  },
+  {
+    key: 'discovery.max_attempts',
+    value: 3,
+    type: 'number',
+    description: 'Maximum attempts for a discovery job (retries reuse the original target params).',
+    is_feature_flag: false,
+  },
+  {
+    key: 'discovery.schedule_interval_minutes',
+    value: 0,
+    type: 'number',
+    description: 'Minutes between scheduled discovery runs. 0 = scheduler disabled (default).',
+    is_feature_flag: false,
+  },
+  {
+    key: 'discovery.rate_limit_per_minute',
+    value: 0,
+    type: 'number',
+    description: 'Max provider records fetched per minute per job. 0 = unlimited (default).',
+    is_feature_flag: false,
+  },
 ];
 
 export interface SeedSettingsOptions {

@@ -140,3 +140,20 @@ export const DEFAULT_INTEGRATION_PROVIDERS: Record<
   demo_hosting: 'none',
   deployment: 'none',
 };
+
+/** Discovery provider selection default (integrations.discovery.provider). */
+export const DEFAULT_DISCOVERY_PROVIDER: IntegrationProviderId = 'none';
+
+/** Runtime limits for discovery jobs (discovery.*). */
+export interface DiscoveryConfig {
+  batch_size: number;
+  max_attempts: number;
+  schedule_interval_minutes: number;
+  rate_limit_per_minute: number;
+}
+export const DEFAULT_DISCOVERY_CONFIG: DiscoveryConfig = {
+  batch_size: 50,
+  max_attempts: 3,
+  schedule_interval_minutes: 0, // 0 = scheduler disabled
+  rate_limit_per_minute: 0, // 0 = unlimited
+};
