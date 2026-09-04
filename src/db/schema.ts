@@ -1165,3 +1165,93 @@ export const rejections = pgTable(
     index('idx_rejections_created_at').on(t.created_at),
   ],
 );
+
+/* ============================================================================
+ * 29. DISCOVERY_JOBS — one provider run against one ICP target
+ * (industry × state, optionally city). Lifecycle: PENDING → RUNNING →
+ * COMPLETED/PARTIAL/FAILED/CANCELED; retries bump `attempts` up to the
+ * `discovery.max_attempts` setting and reset progress counters.
+ * `params` snapshots the target + provider + the execution settings used, so a
+ * retry reuses exactly what the first attempt ran with. `progress` is
+ * incremented as records stream in (never fabricated — every counter moves
+ * from real provider-owned events).
+ * ========================================================================== */
+
+export const discoveryJobStatus = pgEnum('discovery_job_status', [
+  'PENDING',
+  'RUNNING',
+  'COMPLETED',
+  'PARTIAL',
+  'FAILED',
+  'CANCELED',
+]);
+
+/** Progress counters for a discovery job run (all start at 0). */
+export type DiscoveryJobProgress = {
+  records_fetched: number;
+  ingested: number;
+  duplicates_skipped: number;
+  invalid_skipped: number;
+  errors: number;
+};
+
+export const discoveryJobs = pgTable(
+  'discovery_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    industry: text('industry').notNull(),
+    state: text('state').notNull(),
+    city: text('city'),
+    provider: text('provider').notNull(),
+    status: discoveryJobStatus('status').default('PENDING').notNull(),
+    attempts: integer('attempts').default(0).notNull(),
+    params: jsonb('params').$type<Record<string, unknown>>(),
+    progress: jsonb('progress').$type<DiscoveryJobProgress>().notNull().default({
+      records_fetched: 0,
+      ingested: 0,
+      duplicates_skipped: 0,
+      invalid_skipped: 0,
+      errors: 0,
+    }),
+    error: text('error'),
+    started_at: timestamp('started_at', { withTimezone: true }),
+    finished_at: timestamp('finished_at', { withTimezone: true }),
+    cancelled_at: timestamp('cancelled_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_discovery_jobs_status').on(t.status),
+    index('idx_discovery_jobs_created_at').on(t.created_at),
+    index('idx_discovery_jobs_industry_state').on(t.industry, t.state),
+  ],
+);
+
+/* ============================================================================
+ * 30. DISCOVERY_JOB_ERRORS — per-record failures inside a discovery job.
+ * A record that fails (invalid data, insufficient contact, ingest error) gets
+ * its own row so the owner can see exactly which records failed and whether a
+ * retry could plausibly fix them (`retryable`).
+ * ========================================================================== */
+
+export const discoveryJobErrors = pgTable(
+  'discovery_job_errors',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    job_id: uuid('job_id')
+      .notNull()
+      .references(() => discoveryJobs.id, { onDelete: 'cascade' }),
+    business_name: text('business_name'),
+    message: text('message').notNull(),
+    retryable: boolean('retryable').default(false).notNull(),
+    category: text('category'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('idx_discovery_job_errors_job_id').on(t.job_id),
+  ],
+);
