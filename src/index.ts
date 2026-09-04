@@ -13,6 +13,7 @@
 import 'dotenv/config';
 import { buildAuthApp } from './auth/client';
 import { registerConfigRoutes, CONFIG_ROUTE_PREFIX } from './config/routes';
+import { registerDashboardRoutes, DASHBOARD_API_ROUTE, DASHBOARD_PAGE_ROUTE } from './dashboard/routes';
 import { bootstrapOwner } from './auth/bootstrap-owner-fn';
 
 async function main(): Promise<void> {
@@ -30,10 +31,16 @@ async function main(): Promise<void> {
   // Configuration API (authenticated; settings reads/writes).
   await registerConfigRoutes(app);
 
+  // Owner dashboard: API overview + page shell (brief 6).
+  await registerDashboardRoutes(app);
+
   const port = parseInt(process.env.PORT ?? '3000', 10);
   await app.listen({ port, host: '0.0.0.0' });
   console.log(`[start] Local Growth Engine API listening on :${port}`);
-  console.log(`[start] routes: /auth/*  ${CONFIG_ROUTE_PREFIX} (GET), ${CONFIG_ROUTE_PREFIX}/:key (PUT)`);
+  console.log(
+    `[start] routes: /auth/*  ${CONFIG_ROUTE_PREFIX} (GET), ${CONFIG_ROUTE_PREFIX}/:key (PUT)` +
+      `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)`,
+  );
 }
 
 main().catch((err) => {

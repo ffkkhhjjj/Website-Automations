@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Growth Engine — Owner Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/assets/dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Local Growth Engine</div>
+    <nav>
+      <a href="/dashboard" class="active">Dashboard</a>
+      <a href="/api/settings">Settings API</a>
+    </nav>
+    <button id="logout" class="linklike" type="button">Log out</button>
+  </header>
+
+  <main>
+    <section class="page-head">
+      <h1>Business overview</h1>
+      <p id="asof" class="muted"></p>
+    </section>
+
+    <!-- Stat cards -->
+    <section id="stats" class="grid stats" aria-label="Key numbers"></section>
+
+    <!-- Hot leads -->
+    <section class="panel">
+      <h2>Hot leads</h2>
+      <p class="muted">The few leads that need you now — everything else is handled automatically.</p>
+      <div id="hotleads" class="hotleads"></div>
+    </section>
+
+    <!-- Today's activity -->
+    <section class="panel">
+      <h2>Today's activity</h2>
+      <ul id="activity" class="activity"></ul>
+    </section>
+
+    <!-- Exceptions -->
+    <section class="panel">
+      <h2>Exceptions</h2>
+      <p class="muted">Open items that need attention, most urgent first.</p>
+      <div id="exceptions" class="exceptions"></div>
+    </section>
+
+    <!-- System health -->
+    <section class="panel">
+      <h2>System health</h2>
+      <div id="health" class="health-row"></div>
+    </section>
+  </main>
+
+  <footer class="foot muted">
+    Local Growth Engine · dashboard shell (brief 6) · revenue/MRR/demo-views appear once their data sources are wired
+  </footer>
+
+  <script src="/dashboard/assets/dashboard.js"></script>
+</body>
+</html>

@@ -123,6 +123,69 @@ login success (200 + tokens + hashed session row), wrong password (401),
 unauthenticated (401), insufficient API key scope (403), and sufficient scope
 (201). `npx tsc --noEmit` must pass as well.
 
+## Owner dashboard (`src/dashboard/` + `src/public/`)
+
+The owner sees the state of the whole business in 30 seconds — no browsing
+through every lead. The dashboard is a thin, server-served shell (Option A from
+brief 6):
+- the **API** (`GET /api/dashboard/overview`, authenticated, JSON) is the
+  platform's first-class surface — later automation and mobile clients can
+  consume it directly;
+- the **page** (`GET /dashboard`) is a dependency-free HTML/CSS/JS client of
+  that API that renders stat cards, hot leads, today's activity, exceptions,
+  and system health. There is **no build step** — static assets live in
+  `src/public/` and are served by `@fastify/static`.
+
+### URLs
+| Route | Auth | Purpose |
+| --- | --- | --- |
+| `GET /api/dashboard/overview` | owner JWT or any API key (read scope) | full JSON overview |
+| `GET /dashboard` | public shell (data only after login) | the 30-second view |
+| `GET /dashboard/auth/login` | public | minimal owner login page |
+| `GET /dashboard/assets/*` | public | CSS/JS (no business data) |
+
+### How page auth works
+The shell itself is public HTML; it holds **no business data**. After login the
+owner's **JWT access token** is kept in `localStorage` and sent as
+`Authorization: Bearer <token>` to `/api/dashboard/overview`. Logging out
+clears the token and returns to the login page. The token is short-lived
+(default 15m) and rotates via the normal `POST /auth/refresh` flow. (JWT-in-
+localStorage is a deliberate shell-phase tradeoff; a cookie-based session is a
+later hardening step if the dashboard grows.)
+
+### What is real vs. not wired — no fake numbers
+Every metric is computed from real tables (see `src/dashboard/service.ts`):
+
+| Count | Table / source |
+| --- | --- |
+| leadsFound / leadsQualified / interested / sales | `businesses.lifecycle_state` |
+| demosCreated | `demos` (any status) |
+| emailsSent / emailBounces / unsubscribes | `outreach_messages.status` (SENT-family / BOUNCED / OPTED_OUT) |
+| replies | `conversation_messages` direction INBOUND |
+| systemErrors | open `exceptions` with priority CRITICAL or HIGH |
+| todayActivity | today's `audit_logs` + `tasks` (limit 10) |
+| exceptions | open (OPEN/ACKNOWLEDGED) `exceptions`, CRITICAL → HIGH → MEDIUM → LOW |
+| health | live `SELECT 1` + `tasks` by status + last `audit_logs` timestamp |
+
+**Not wired (returned as honest `0` with `countsMeta` provenance):**
+`revenue` (comes from the connected finance account only once money moves —
+the platform is not live), `mrr` (billing/subscriptions pipeline), and
+`demoViews` (demo-host analytics). The page shows these cards as `0` with a
+"source not wired" note — the dashboard never guesses.
+
+**Hot leads**: businesses currently `HOT`, or `INTERESTED` with an inbound
+reply in the last 14 days; the top-N are returned by `lead_priority_score`
+(N = `notifications.hot_lead_limit`, seeded 10, editable from Settings —
+fallback 10). Each card carries business name, city/state, website URL,
+priority/quality scores, latest reply snippet, intent classification,
+confidence, a human-readable suggested action, and the demo URL.
+
+### Tests
+`test/dashboard.test.ts` covers: 401 without credentials; owner JWT + shape of
+all payload keys; read-scope API key; seeded HOT business surfaces with every
+spec field; CRITICAL exception prioritized first; honest zeros on an empty DB
+with `health.dbReachable: true`; and page/asset/login serving (200 + content).
+
 ## Lead lifecycle (state machine: `src/lifecycle/`)
 
 Every lead routes through a strictly-enforced state machine — the platform's

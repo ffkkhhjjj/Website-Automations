@@ -115,6 +115,13 @@ const DEFAULT_SETTINGS: SeedSetting[] = [
     is_feature_flag: false,
   },
   {
+    key: 'notifications.hot_lead_limit',
+    value: 10,
+    type: 'number',
+    description: 'Maximum number of hot leads shown on the owner dashboard (top-N by lead priority).',
+    is_feature_flag: false,
+  },
+  {
     key: 'business.hours',
     value: { timezone: 'America/Chicago', workdays: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' },
     type: 'json',
