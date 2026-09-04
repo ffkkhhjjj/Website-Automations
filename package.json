@@ -15,6 +15,7 @@
     "db:verify": "tsx src/db/verify.ts",
     "db:reset": "drizzle-kit drop && drizzle-kit push",
     "typecheck": "tsc --noEmit",
+    "start": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "auth:bootstrap": "tsx src/auth/bootstrap-owner.ts"

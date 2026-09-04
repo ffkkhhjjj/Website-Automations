@@ -23,6 +23,8 @@ export interface AuditEvent {
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
   metadata?: Record<string, unknown> | null;
+  /** Source subsystem tag; defaults to 'auth'. */
+  source?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export async function writeAudit(event: AuditEvent): Promise<void> {
     entity_id: event.entityId,
     before: event.before ?? null,
     after: event.after ?? null,
-    source: 'auth',
+    source: event.source ?? 'auth',
     metadata: event.metadata ?? null,
   });
 }

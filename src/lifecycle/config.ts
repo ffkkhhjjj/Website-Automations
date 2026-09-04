@@ -1,15 +1,16 @@
 /**
  * Config helpers for the lifecycle module.
  *
- * Business rules live in system_settings (never hard-coded business values).
- * This module reads the keys needed by the rejection rules and the lead
- * classification thresholds, falling back to conservative defaults that match
- * the master spec when a key is missing (it may not be seeded yet in some
- * environments). Thresholds are config, not env — .env.example is untouched.
+ * Business rules live in system_settings (never hard-coded business values),
+ * read through the shared SettingsService (src/config) — typed, validated,
+ * cached, with documented spec defaults when a key is missing. Thresholds are
+ * config, not env — .env.example is untouched.
+ *
+ * Public API is unchanged from the standalone readers (callers keep working).
  */
-import { db } from '../db/client.js';
-import { systemSettings } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { settingsService } from '../config/singleton';
+import { settings } from '../config/singleton';
+import * as D from '../config/defaults';
 
 /** Raw value shape of the scoring.lead_classification.thresholds setting. */
 export interface LeadClassificationThresholds {
@@ -19,11 +20,8 @@ export interface LeadClassificationThresholds {
 }
 
 /** Defaults match the seeded value (spec: >=80 HIGH_PRIORITY, >=65 SECONDARY, >=50 REVIEW, <50 REJECT). */
-export const DEFAULT_LEAD_CLASSIFICATION_THRESHOLDS: LeadClassificationThresholds = {
-  high_priority_min: 80,
-  secondary_min: 65,
-  review_min: 50,
-};
+export const DEFAULT_LEAD_CLASSIFICATION_THRESHOLDS: LeadClassificationThresholds =
+  D.DEFAULT_LEAD_CLASSIFICATION_THRESHOLDS;
 
 /** Master-spec website classification bands (spec, fixed — not config). */
 export interface WebsiteClassificationBands {
@@ -53,33 +51,21 @@ export interface RejectionRuleConfig {
 }
 
 /** Conservative defaults; overridden by system_settings key `scoring.rejection.thresholds`. */
-export const DEFAULT_REJECTION_RULE_CONFIG: RejectionRuleConfig = {
-  min_opportunity_score: 50,
-  excellent_website_min: 90,
-  min_contactability_score: 40,
-  inactive_statuses: ['CLOSED', 'PERMANENTLY_CLOSED', 'TEMPORARILY_CLOSED'],
-};
+export const DEFAULT_REJECTION_RULE_CONFIG: RejectionRuleConfig =
+  D.DEFAULT_REJECTION_RULE_CONFIG;
 
-/** Read one system_setting key. Returns undefined when the key is absent. */
+/** Read one system_setting key (raw). Returns undefined when the key is absent. */
 export async function getSetting<T>(key: string): Promise<T | undefined> {
-  const rows = await db
-    .select({ value: systemSettings.value })
-    .from(systemSettings)
-    .where(eq(systemSettings.key, key))
-    .limit(1);
-  return rows[0]?.value as T | undefined;
+  const row = await settingsService.get(key).catch(() => undefined);
+  return row?.value as T | undefined;
 }
 
 /** Read the rejection-rule config, merging any stored JSON over the defaults. */
 export async function getRejectionRuleConfig(): Promise<RejectionRuleConfig> {
-  const stored = await getSetting<Partial<RejectionRuleConfig>>('scoring.rejection.thresholds');
-  return { ...DEFAULT_REJECTION_RULE_CONFIG, ...(stored ?? {}) };
+  return settings.getRejectionRuleConfig();
 }
 
 /** Read the lead classification thresholds (scoring.lead_classification.thresholds). */
 export async function getLeadClassificationThresholds(): Promise<LeadClassificationThresholds> {
-  const stored = await getSetting<Partial<LeadClassificationThresholds>>(
-    'scoring.lead_classification.thresholds',
-  );
-  return { ...DEFAULT_LEAD_CLASSIFICATION_THRESHOLDS, ...(stored ?? {}) };
+  return settings.getLeadThresholds();
 }
