@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Owner login — Local Growth Engine</title>
+  <link rel="stylesheet" href="/dashboard/assets/dashboard.css" />
+</head>
+<body>
+  <form id="login" class="login-wrap" method="post">
+    <h1>Owner login</h1>
+    <p class="muted">Dashboard access is for the platform owner only.</p>
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required autocomplete="username" />
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required autocomplete="current-password" />
+    <button type="submit">Sign in</button>
+    <p id="err" class="error" hidden></p>
+  </form>
+  <script>
+    (function () {
+      'use strict';
+      var TOKEN_KEY = 'lge_owner_access_token';
+      var form = document.getElementById('login');
+      var errBox = document.getElementById('err');
+
+      form.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        errBox.hidden = true;
+        var email = String(document.getElementById('email').value || '').trim();
+        var password = document.getElementById('password').value || '';
+        try {
+          var res = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password }),
+          });
+          var data = await res.json();
+          if (!res.ok || !data.access_token) {
+            errBox.textContent = (data.error && data.error.message) || 'Login failed.';
+            errBox.hidden = false;
+            return;
+          }
+          localStorage.setItem(TOKEN_KEY, data.access_token);
+          window.location.href = '/dashboard';
+        } catch (e) {
+          errBox.textContent = 'Could not reach the login service: ' + e.message;
+          errBox.hidden = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

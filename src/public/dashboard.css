@@ -1,0 +1,85 @@
+/* Owner dashboard shell — dependency-free, fast, honest zeros. */
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --ink: #1c2430;
+  --muted: #6b7683;
+  --line: #e3e7ec;
+  --brand: #1a5fb4;
+  --hot: #c2410c;
+  --warn: #b45309;
+  --ok: #12805c;
+  --err: #b42318;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 24px; background: var(--card); border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 700; font-size: 16px; color: var(--brand); }
+.topbar nav a { margin-right: 16px; color: var(--muted); text-decoration: none; }
+.topbar nav a.active { color: var(--ink); font-weight: 600; }
+.linklike { border: 0; background: none; color: var(--muted); cursor: pointer; }
+main { max-width: 1080px; margin: 0 auto; padding: 24px; }
+.page-head { display: flex; align-items: baseline; justify-content: space-between; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 4px; }
+.muted { color: var(--muted); font-size: 13px; }
+
+.grid.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 16px 0 8px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.stat .num { font-size: 24px; font-weight: 700; }
+.stat .label { color: var(--muted); font-size: 12px; }
+.stat .note { color: var(--muted); font-size: 11px; font-style: italic; }
+
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 18px 0; }
+
+.hotleads { display: grid; gap: 10px; margin-top: 8px; }
+.lead { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.lead .name { font-weight: 700; font-size: 15px; }
+.lead .meta { color: var(--muted); font-size: 13px; }
+.lead .attrs { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.lead .attr b { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
+.lead .attr span { font-size: 14px; font-weight: 600; }
+.lead .reply { margin-top: 8px; padding: 8px 10px; background: var(--bg); border-radius: 6px; font-size: 13px; }
+.lead .action { margin-top: 8px; color: var(--brand); font-size: 13px; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.badge.hot { background: #fee2e2; color: var(--err); }
+.badge.interested { background: #fef3e2; color: var(--warn); }
+
+.activity { list-style: none; padding: 0; margin: 8px 0 0; }
+.activity li { display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--bg); }
+.activity .when { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 120px; }
+
+.exceptions { display: grid; gap: 8px; margin-top: 8px; }
+.exc { display: flex; gap: 12px; align-items: baseline; border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 8px 12px; }
+.exc.critical { border-left-color: var(--err); }
+.exc.high { border-left-color: #d97706; }
+.exc.medium { border-left-color: #d4a72c; }
+.exc.low { border-left-color: var(--line); }
+.exc .pri { font-weight: 700; font-size: 12px; min-width: 76px; }
+.exc .cat { color: var(--muted); font-size: 12px; min-width: 110px; }
+.exc .when { color: var(--muted); font-size: 12px; margin-left: auto; }
+.none { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+.health-row { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin-top: 8px; }
+.pill { padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.pill.ok { background: #e4f5ec; color: var(--ok); }
+.pill.bad { background: #fee2e2; color: var(--err); }
+.health-row .tasks { font-size: 13px; color: var(--muted); }
+.health-row .issues { font-size: 13px; color: var(--err); }
+
+.foot { text-align: center; padding: 20px 0 28px; }
+
+/* login page */
+.login-wrap { max-width: 380px; margin: 8vh auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 24px; }
+.login-wrap h1 { font-size: 18px; }
+.login-wrap input { width: 100%; padding: 8px 10px; margin: 6px 0 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; }
+.login-wrap button { width: 100%; padding: 9px; border: 0; border-radius: 6px; background: var(--brand); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.login-wrap .error { color: var(--err); font-size: 13px; margin-top: 8px; }
