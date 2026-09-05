@@ -433,12 +433,15 @@ async function persistFailure(
       actor_type: 'SYSTEM',
       actor_id: null,
       action: 'WEBSITE_ANALYSIS_FAILED',
-      entity_type: 'website',
-      entity_id: websiteId,
+      // Business-scoped (matches the orchestrator's audit convention) so the
+      // owner's per-business history shows the failure; the website /
+      // analysis ids travel in metadata.
+      entity_type: 'business',
+      entity_id: businessId,
       before: null,
       after: { reason: failure.reason, message: failure.message, httpStatus: failure.httpStatus ?? null },
       source: 'website-analysis',
-      metadata: { analysis_id: marker!.id, reason: failure.reason, http_status: failure.httpStatus ?? null },
+      metadata: { analysis_id: marker!.id, website_id: websiteId, reason: failure.reason, http_status: failure.httpStatus ?? null },
     });
 
     return {

@@ -323,7 +323,13 @@ export async function fetchWebsite(
   const controller = new AbortController();
   const overallTimer = setTimeout(() => controller.abort(), options.overallTimeoutMs);
   try {
-    let home = await fetchWithRetry(normalized, options, controller.signal);
+    // The URL that actually produced the home page. Normally `normalized`;
+    // when the https attempt fails at the transport level for scheme-less
+    // input, the http fallback's URL is reported instead — never a scheme
+    // that was never successfully fetched (downstream checks and storage
+    // must see the observed URL, not a fiction).
+    let startUrl = normalized;
+    let home = await fetchWithRetry(startUrl, options, controller.signal);
     if (!home && controller.signal.aborted) {
       return {
         ok: false,
@@ -335,6 +341,7 @@ export async function fetchWebsite(
       const httpUrl = httpVariantOf(rawUrl);
       if (httpUrl && httpUrl !== normalized) {
         home = await fetchWithRetry(httpUrl, options, controller.signal);
+        if (home) startUrl = httpUrl;
       }
     }
     if (!home) {
@@ -396,7 +403,8 @@ export async function fetchWebsite(
     }
 
     const websiteInput: WebsiteInput = {
-      url: normalized,
+      // Observed start URL (not the https guess when the http fallback won).
+      url: startUrl,
       pages,
       observedBusinessName: nap.businessName,
       observedPhone: nap.phone,
