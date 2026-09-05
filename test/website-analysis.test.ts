@@ -100,8 +100,9 @@ class LocalSite {
         <img src="team.jpg"><img src="van.jpg">
         <a href="tel:+15125550000">Call (512) 555-0000</a>
         <a href="/services">Services</a>
-        <a href="/about">About Us</a>
         <a href="/contact">Contact</a>
+        <!-- Exactly 3 internal links: the default crawl budget is 3, so the
+             broken-page link must be reachable for the no_broken_links check. -->
         <a href="/broken-page">Broken</a>
         <a href="mailto:info@rapidrooter.example">Email us</a>
         <form action="/contact" method="post"></form>

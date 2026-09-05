@@ -379,6 +379,9 @@ export async function fetchWebsite(
 
     // Discover internal links from the home page; prefer about/services/contact.
     const homeHtml = home.page.html ?? '';
+    // Home-page signals first: the home title is the authoritative business
+    // name, so it must claim the slot before sub-page titles are seen.
+    collectNapSignals(homeHtml, nap);
     const hrefs = [...homeHtml.matchAll(/href=["']([^"']+)["']/gi)]
       .map((m) => m[1] ?? '')
       .filter((h) => isCrawlableLink(h, baseUrl))
