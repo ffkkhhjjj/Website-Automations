@@ -100,7 +100,10 @@ interface ResolveOutcome {
 }
 
 /** The gate: determine whether a website exists for this business. */
-export async function resolveWebsite(businessId: string): Promise<ResolveOutcome> {
+export async function resolveWebsite(
+  businessId: string,
+  fetchOptions: FetchOptions = {},
+): Promise<ResolveOutcome> {
   const [business] = await db
     .select()
     .from(businesses)
@@ -113,7 +116,7 @@ export async function resolveWebsite(businessId: string): Promise<ResolveOutcome
   if (!rawUrl) {
     return { hasWebsite: false };
   }
-  const fetchResult = await fetchWebsite(rawUrl);
+  const fetchResult = await fetchWebsite(rawUrl, fetchOptions);
   if (!fetchResult.ok || !fetchResult.websiteInput) {
     const f = fetchResult.failure ?? {
       reason: 'INTERNAL_ERROR',
@@ -160,7 +163,7 @@ export async function analyzeBusinessWebsite(
   }
 
   // --- 2. Resolve the website (fetch for real). --------------------------
-  const resolved = await resolveWebsite(businessId);
+  const resolved = await resolveWebsite(businessId, opts.fetchOptions);
   if (!resolved.hasWebsite) {
     // No URL: NO_WEBSITE path — a WEBSITE_NOT_FOUND failure + a low-priority
     // informational exception. No score is invented. A business without a

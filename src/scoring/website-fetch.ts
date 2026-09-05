@@ -352,6 +352,16 @@ export async function fetchWebsite(
         },
       };
     }
+    // Redirect loop / no response at all → nothing meaningful was fetched.
+    if (!home.ok && home.page.httpStatus === 0) {
+      return {
+        ok: false,
+        failure: {
+          reason: 'TOO_MANY_REDIRECTS',
+          message: `home page exceeded ${options.maxRedirects} redirects or returned no response (${home.finalUrl})`,
+        },
+      };
+    }
 
     const pages: PageObservation[] = [home.page];
     const baseUrl = home.finalUrl;
@@ -375,9 +385,11 @@ export async function fetchWebsite(
       if (!p) continue;
       if (!visited.has(p.page.url)) {
         visited.add(p.page.url);
-        pages.push(p.page);
+        if (p.page.httpStatus > 0) {
+          pages.push(p.page);
+        }
       }
-      if (!p.ok && p.page.httpStatus >= 400) {
+      if (p.page.httpStatus === 0 || p.page.httpStatus >= 400) {
         brokenInternalLinks.push(p.page.url);
       }
       collectNapSignals(p.page.html ?? '', nap);
