@@ -27,6 +27,11 @@ import {
   registerDiscoveryAdminRoutes,
   DISCOVERY_PAGE_ROUTE,
 } from './discovery/admin';
+import {
+  registerWebsiteAnalysisRoutes,
+  ANALYZE_WEBSITE_ROUTE,
+  REANALYZE_WEBSITE_ROUTE,
+} from './scoring/routes';
 import { DiscoveryScheduler } from './discovery/scheduler';
 import { settings } from './config/singleton';
 import { bootstrapOwner } from './auth/bootstrap-owner-fn';
@@ -56,6 +61,9 @@ async function main(): Promise<void> {
   await registerDiscoveryRoutes(app);
   await registerDiscoveryAdminRoutes(app);
 
+  // Website analysis API (fetch + analyze core — this brief).
+  await registerWebsiteAnalysisRoutes(app);
+
   // Discovery scheduler (brief 8B wiring): DISABLED at
   // schedule_interval_minutes=0 (the seeded default) — nothing runs until the
   // owner enables it in Settings. Enabled → periodic ticks that create + run
@@ -80,7 +88,8 @@ async function main(): Promise<void> {
     `[start] routes: /auth/*  ${CONFIG_ROUTE_PREFIX} (GET), ${CONFIG_ROUTE_PREFIX}/:key (PUT)` +
       `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)` +
       `  ${INTEGRATIONS_STATUS_ROUTE} (GET)` +
-      `  ${DISCOVERY_JOBS_ROUTE} (GET/POST)  ${DISCOVERY_PAGE_ROUTE} (GET)`,
+      `  ${DISCOVERY_JOBS_ROUTE} (GET/POST)  ${DISCOVERY_PAGE_ROUTE} (GET)` +
+      `  ${ANALYZE_WEBSITE_ROUTE} (POST)  ${REANALYZE_WEBSITE_ROUTE} (POST)`,
   );
 }
 

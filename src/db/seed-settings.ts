@@ -219,6 +219,13 @@ const DEFAULT_SETTINGS: SeedSetting[] = [
     description: 'Max provider records fetched per minute per job. 0 = unlimited (default).',
     is_feature_flag: false,
   },
+  {
+    key: 'analysis.website_recent_ms',
+    value: 86400000,
+    type: 'number',
+    description: 'Recency window (ms) for website analyses: a fresh analysis short-circuits re-analysis unless forced.',
+    is_feature_flag: false,
+  },
 ];
 
 export interface SeedSettingsOptions {
