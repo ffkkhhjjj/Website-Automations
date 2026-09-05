@@ -425,6 +425,72 @@ a test-only concrete stub provider satisfying the interface (registered via
 index so production code can't use it), and the status endpoint's 401/auth +
 honest payload behavior.
 
+## Lead Discovery (`src/discovery/` + `src/public/discovery.*`)
+
+Automatically finds local US businesses (plumbers first) matching the ICP
+target settings and ingests them as DISCOVERED leads. The core (providers,
+normalize, dedup, ingest, runner, scheduler) is deterministic TS with **no
+network calls and no fake data**: until a real provider is selected and
+credentialed, jobs fail honestly instead of pretending.
+
+### API (auth like the config API — 401 unauthenticated, 403 insufficient scope)
+
+| Endpoint | Auth | Purpose |
+| --- | --- | --- |
+| `POST /api/discovery/jobs` | owner JWT or admin API key | Body `{industry, state, city?}` → **202** + job row (PENDING); runs asynchronously |
+| `POST /api/discovery/jobs/:id/retry` | owner JWT or admin API key | Retry a finished job (`COMPLETED/PARTIAL/FAILED/CANCELED`); bumps attempts; 409 otherwise (incl. past `discovery.max_attempts`) |
+| `POST /api/discovery/jobs/:id/cancel` | owner JWT or admin API key | Cancel an active job; the runner stops between batches → `CANCELED`. A PENDING job with no live runner is canceled directly; a RUNNING job with no runner in this process gets an honest 409 |
+| `GET /api/discovery/jobs` | owner JWT or any API key | List jobs, most recent first (`?limit=1..200`, default 50) |
+| `GET /api/discovery/jobs/:id` | owner JWT or any API key | Job + `discovery_job_errors` rows + businesses estimate |
+
+Create/retry/cancel write `audit_logs` rows (`DISCOVERY_JOB_CREATED` /
+`DISCOVERY_JOB_RETRIED` / `DISCOVERY_JOB_CANCELED`, actor = the principal).
+
+**Job lifecycle**: `PENDING → RUNNING → COMPLETED | PARTIAL | FAILED | CANCELED`
+with progress counters (`records_fetched / ingested / duplicates_skipped /
+invalid_skipped / errors`) that only move from real runner events. With no
+provider configured, the run marks the job **FAILED** and writes a MEDIUM
+exception (`discovery_provider_unconfigured`) — never a fake success.
+
+**Businesses estimate honesty**: the runner does not tag ingested businesses
+with job ids (schema linkage is out of scope), so `GET /:id` reports businesses
+matching the job target created within the run window, grouped by source, and
+labels it as an estimate in a `note`.
+
+### Admin page
+
+`GET /admin/discovery` — owner shell (same JWT-in-localStorage flow as
+`/dashboard`): start a job (industry prefilled from `target.industries`, US
+state select, optional city), job table with status badges, progress, retry /
+cancel buttons, and a detail view with error rows (category / message /
+retryable) and the businesses estimate.
+
+### Scheduler
+
+Wired in `src/index.ts` at boot. `discovery.schedule_interval_minutes = 0`
+(the seeded default) keeps it **disabled** — the start log says
+`discovery scheduler: disabled (schedule_interval_minutes=0)`. Set a positive
+interval in Settings to enable periodic ticks, which create + run jobs from
+`target.industries × target.states (× target.cities)` with the scheduler's own
+single-active-job guard and a silent skip while no provider is configured.
+
+### Wiring a real provider later (no fake integrations)
+
+1. Implement the `DiscoveryProvider` interface (`src/discovery/providers.ts`):
+   `id` + `search(target)` async generator yielding `RawBusinessRecord`s — only
+   fields actually found in legitimate public sources, never synthesized.
+2. Register the instance (a production registration hook is the
+   `test-hooks.ts` pattern; the registry serves the selection from settings).
+3. Set `integrations.discovery.provider` to the provider id in Settings.
+4. Set `DISCOVERY_API_KEY` in env. `configured = selection ≠ "none" AND
+   instance registered AND env key present` — all three, always.
+
+### Env var table (discovery)
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DISCOVERY_API_KEY` | no (until a real provider ships) | Credential for the selected discovery provider; absent ⇒ jobs fail honestly with `discovery_provider_unconfigured` |
+
 ## Database design decisions
 
 - **Enums**: real Postgres `ENUM` types (`pgEnum`), used consistently for every
