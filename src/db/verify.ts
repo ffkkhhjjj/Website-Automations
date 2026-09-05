@@ -32,6 +32,8 @@ const EXPECTED_TABLES = [
   'production_websites', 'website_versions', 'domains', 'subscriptions', 'payments',
   'tasks', 'exceptions', 'audit_logs', 'system_settings', 'scoring_versions',
   'templates', 'metrics', 'lead_state_history', 'rejections',
+  // discovery tables (migration 0003)
+  'discovery_jobs', 'discovery_job_errors',
 ];
 
 const EXPECTED_ENUMS = [
@@ -45,7 +47,16 @@ const EXPECTED_ENUMS = [
   'payment_status', 'task_status', 'exception_priority', 'exception_status',
   'scoring_type', 'template_type', 'business_operational_status',
   'contact_status', 'audit_actor_type', 'rejection_reason',
+  // discovery enums (migration 0003)
+  'discovery_job_status',
 ];
+
+/**
+ * Expected-table count: ANY table present in the schema (incl. auth + future
+ * migrations) must be in EXPECTED_TABLES — the verify is "no surprises": every
+ * table that exists must be a known one and every expected one must exist.
+ * The list above is additive; a later migration only adds to it.
+ */
 
 let failures = 0;
 

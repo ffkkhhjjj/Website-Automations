@@ -32,6 +32,7 @@ export type {
   NotificationRulesConfig,
   BusinessHoursConfig,
   AiEvaluatorConfig,
+  DiscoveryConfig,
 } from './defaults';
 
 const isStrArray = (v: unknown): v is string[] =>
@@ -219,6 +220,33 @@ export function createSettingsAccessors(service: SettingsService) {
       const hasApiKey = Boolean(process.env.AI_EVALUATOR_API_URL || process.env.AI_EVALUATOR_API_KEY);
       const configured = Boolean(provider && model && promptRef && hasApiKey);
       return { configured, provider: provider || undefined, model: model || undefined, promptRef: promptRef || undefined };
+    },
+
+    /** Discovery provider selection (integrations.discovery.provider). */
+    getDiscoveryProvider(): Promise<string> {
+      return service.getParsed<string>(
+        'integrations.discovery.provider',
+        (v): v is string => typeof v === 'string',
+        D.DEFAULT_DISCOVERY_PROVIDER,
+      );
+    },
+
+    /** Discovery job runtime limits (discovery.*). */
+    async getDiscoveryConfig(): Promise<D.DiscoveryConfig> {
+      const isNonNegativeInt = (v: unknown): v is number =>
+        typeof v === 'number' && Number.isInteger(v) && v >= 0;
+      const [batch_size, max_attempts, schedule_interval_minutes, rate_limit_per_minute] = await Promise.all([
+        service.getParsed<number>('discovery.batch_size', isNonNegativeInt, D.DEFAULT_DISCOVERY_CONFIG.batch_size),
+        service.getParsed<number>('discovery.max_attempts', isNonNegativeInt, D.DEFAULT_DISCOVERY_CONFIG.max_attempts),
+        service.getParsed<number>('discovery.schedule_interval_minutes', isNonNegativeInt, D.DEFAULT_DISCOVERY_CONFIG.schedule_interval_minutes),
+        service.getParsed<number>('discovery.rate_limit_per_minute', isNonNegativeInt, D.DEFAULT_DISCOVERY_CONFIG.rate_limit_per_minute),
+      ]);
+      return {
+        batch_size: Math.max(batch_size, 1),
+        max_attempts: Math.max(max_attempts, 1),
+        schedule_interval_minutes,
+        rate_limit_per_minute,
+      };
     },
   };
 }
