@@ -6,9 +6,10 @@
  *     (seeded default "none");
  *   - with "none" (or any vendor id that has no registered implementation) the
  *     registry serves NoneProvider, whose search() THROWS NotConfiguredError;
- *   - `configured` is derived ONLY from a real provider being registered AND
- *     its env credential (DISCOVERY_API_KEY) being present — never from a stub
- *     (no fake integrations).
+ *   - `configured` is derived ONLY from an explicitly selected non-"none"
+ *     provider (settings value or test-seam override) AND its env credential
+ *     (DISCOVERY_API_KEY) being present — a stub instance alone, with the
+ *     settings still on "none", is never configured (no fake integrations).
  *
  * Tests can register a concrete stub provider through the in-test hook
  * `registerDiscoveryProviderForTesting` (src/discovery/test-hooks.ts, not
@@ -16,7 +17,7 @@
  */
 import { settingsService } from '../config/singleton';
 import { DEFAULT_DISCOVERY_PROVIDER } from '../config/defaults';
-import { NoneProvider, DISCOVERY_ENV_VARS } from './providers';
+import { NoneProvider, DISCOVERY_ENV_VARS, DISCOVERY_PROVIDER_NONE } from './providers';
 import type { DiscoveryProvider } from './providers';
 
 /** Settings key for discovery provider selection. */
@@ -52,11 +53,12 @@ interface Options {
 /**
  * Build the registry for the current settings value.
  *
- * configured semantics: a registry is configured ONLY when a real provider
- * instance is registered AND its env credential is present. With "none" or an
- * unregistered vendor id, it serves NoneProvider — search() throws. This keeps
- * the "no fake integrations" rule: an env key alone, or a provider alone, is
- * never enough.
+ * configured semantics: a registry is configured ONLY when a non-"none"
+ * provider is selected (explicit providerId override or the settings value)
+ * AND a non-NoneProvider instance is registered AND its env credential is
+ * present. With "none" selected, it serves NoneProvider — search() throws.
+ * This keeps the "no fake integrations" rule: an env key alone, or an
+ * instance alone with selection still on "none", is never enough.
  */
 export async function buildDiscoveryRegistry(opts: Options = {}): Promise<DiscoveryRegistry> {
   const providerId =
@@ -67,7 +69,13 @@ export async function buildDiscoveryRegistry(opts: Options = {}): Promise<Discov
       DEFAULT_DISCOVERY_PROVIDER,
     ));
   const instance = opts.providerInstance ?? new NoneProvider();
-  const configured = opts.providerInstance !== undefined && hasDiscoveryEnv();
+  // Both halves required: a non-"none" provider must be SELECTED (explicit
+  // override wins over settings) and its env credential must be present. A
+  // stub instance alone, with selection still on "none", stays unconfigured.
+  const configured =
+    providerId !== DISCOVERY_PROVIDER_NONE &&
+    instance.id !== DISCOVERY_PROVIDER_NONE &&
+    hasDiscoveryEnv();
 
   return {
     provider: providerId,

@@ -14,6 +14,7 @@
  * website_status null → NO website row (absence of evidence ≠ evidence of
  * absence).
  */
+import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { businesses, websites, auditLogs } from '../db/schema';
@@ -48,6 +49,17 @@ export async function ingestBusiness(
   b: NormalizedBusiness,
   industry: string,
 ): Promise<IngestResult> {
+  // Contact sufficiency FIRST (before any dedup check): a record with a name
+  // + city/state but no phone/email/address can never be worked as a lead —
+  // report it as insufficient_contact, not as a duplicate of an older row.
+  if (!hasContactRoute(b)) {
+    return {
+      inserted: false,
+      skipped: 'insufficient_contact',
+      reason: `record "${b.business_name}" has no contact route (need phone, email, or address)`,
+    };
+  }
+
   // Crash-resume safety: skip when an identical business already exists by
   // name+city+state (the runner pre-checks via dedup; this guards a resume).
   const dup = await tx
@@ -95,9 +107,15 @@ export async function ingestBusiness(
     websiteId = w?.id ?? null;
     websiteRow = true;
   } else if (b.website_status === 'verified_absent') {
+    // A NO_WEBSITE row needs a unique url (u_websites_url). The marker is a
+    // deterministic, business-stable key — derived from the normalized phone,
+    // domain, or name+city+state — computed BEFORE the insert and stable
+    // across re-runs. It is a row label, not a fabricated URL.
+    const noWebsiteKey = noWebsiteUrlFor(b);
     const [w] = await tx
       .insert(websites)
-      .values({ business_id: businessId, url: '', status: 'NO_WEBSITE', discovered_at: new Date() })
+      .values({ business_id: businessId, url: noWebsiteKey, status: 'NO_WEBSITE', discovered_at: new Date() })
+      .onConflictDoNothing({ target: websites.url }) // same business re-ingested → marker key already present
       .returning({ id: websites.id });
     websiteId = w?.id ?? null;
     websiteRow = true;
@@ -123,6 +141,23 @@ export async function ingestBusiness(
   });
 
   return { inserted: true, business_id: businessId, website_id: websiteId, website_row: websiteRow };
+}
+
+/**
+ * Deterministic, business-stable `url` key for a verified-absent (NO_WEBSITE)
+ * websites row. Derived from the normalized record's stable identity — the
+ * phone, the domain, or the name+city+state fallback — hashed to 12 hex chars.
+ * Computed from the record (never from the randomly-generated business uuid),
+ * so the same business always yields the same key across re-runs and the row
+ * satisfies the `u_websites_url` unique constraint.
+ */
+export function noWebsiteUrlFor(b: NormalizedBusiness): string {
+  const stable =
+    b.phone ??
+    (b.website_url ? domainFromUrl(b.website_url) ?? null : null) ??
+    [b.business_name.trim().toLowerCase(), (b.city ?? '').trim().toLowerCase(), (b.state ?? '').trim().toLowerCase()].join('|');
+  const hash = createHash('sha256').update(stable).digest('hex').slice(0, 12);
+  return `no-website:${hash}`;
 }
 
 /** Map a provider operational status string onto the DB enum; unknown → UNKNOWN. */

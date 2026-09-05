@@ -295,7 +295,11 @@ export async function runDiscoveryJob(jobId: string, opts: RunOptions = {}): Pro
     }
 
     const finalProgress = await loadProgress(jobId);
-    const finalStatus: 'COMPLETED' | 'PARTIAL' = sawError || finalProgress.errors > 0 ? 'PARTIAL' : 'COMPLETED';
+    // PARTIAL when any fetched record was not ingested for a non-duplicate
+    // reason (normalize failure, invalid skip, or ingest error). Duplicates
+    // alone still complete cleanly.
+    const hadIssues = sawError || finalProgress.invalid_skipped > 0 || finalProgress.errors > 0;
+    const finalStatus: 'COMPLETED' | 'PARTIAL' = hadIssues ? 'PARTIAL' : 'COMPLETED';
     await setJobStatus(jobId, { status: finalStatus, finished_at: new Date() });
     await writeAudit({
       actorType: 'SYSTEM',
@@ -337,14 +341,10 @@ async function processBatch(
   const seen = new Set<string>();
 
   for (const b of batch) {
-    // 1. Dedup: within batch AND against existing businesses.
-    if (isDuplicate(b, index, seen)) {
-      await bumpProgress(jobId, { duplicates_skipped: 1 });
-      continue;
-    }
-    for (const k of Object.values(dedupKeysFor(b))) if (k) seen.add(k);
-
-    // 2. Contact-route gate (name + city&state + phone/email/address).
+    // 1. Validity gates FIRST (before any dedup check): a record missing
+    // city/state or with no contact route is reported as invalid_skipped even
+    // when it also matches an existing row — contact sufficiency outranks
+    // duplicate detection.
     if (!b.city || !b.state) {
       await bumpProgress(jobId, { invalid_skipped: 1, errors: 1 });
       await writeJobError(jobId, {
@@ -367,6 +367,13 @@ async function processBatch(
       });
       continue;
     }
+
+    // 2. Dedup: within batch AND against existing businesses.
+    if (isDuplicate(b, index, seen)) {
+      await bumpProgress(jobId, { duplicates_skipped: 1 });
+      continue;
+    }
+    for (const k of Object.values(dedupKeysFor(b))) if (k) seen.add(k);
 
     // 3. Ingest (business + website + audit) in a per-record transaction.
     try {
@@ -413,7 +420,7 @@ function sleep(ms: number): Promise<void> {
  * discovery.max_attempts), resets progress counters, reuses the original
  * task params, sets PENDING then RUNNING (via runDiscoveryJob).
  */
-export async function retryDiscoveryJob(jobId: string): Promise<RunResult> {
+export async function retryDiscoveryJob(jobId: string, opts: RunOptions = {}): Promise<RunResult> {
   const job = await getJob(jobId);
   if (!FINAL_STATUSES.includes(job.status as (typeof FINAL_STATUSES)[number])) {
     throw new Error(
@@ -444,7 +451,7 @@ export async function retryDiscoveryJob(jobId: string): Promise<RunResult> {
     after: { status: 'PENDING', attempts },
     source: 'discovery',
   });
-  return runDiscoveryJob(jobId);
+  return runDiscoveryJob(jobId, opts);
 }
 
 /* ----------------------------------------------------------------------------

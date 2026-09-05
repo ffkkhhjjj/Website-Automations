@@ -37,7 +37,7 @@ export function dedupKeysFor(b: NormalizedBusiness): DedupKeys {
   }
   if (b.business_name && b.city && b.state) {
     keys.nameCityState =
-      [b.business_name.trim().toLowerCase(), b.city.trim().toLowerCase(), b.state.trim().toUpperCase()].join('|');
+      [b.business_name.trim().toLowerCase(), b.city.trim().toLowerCase(), b.state.trim().toLowerCase()].join('|');
   }
   return keys;
 }
@@ -80,7 +80,7 @@ export function existingKeysFor(p: ExistingBusinessRow): DedupKeys {
     domain: p.website_url ? domainFromUrl(p.website_url) ?? undefined : undefined,
     nameCityState:
       p.business_name && p.city && p.state
-        ? [p.business_name.trim().toLowerCase(), p.city.trim().toLowerCase(), p.state.trim().toUpperCase()].join('|')
+        ? [p.business_name.trim().toLowerCase(), p.city.trim().toLowerCase(), p.state.trim().toLowerCase()].join('|')
         : undefined,
   };
 }
