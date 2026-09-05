@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Growth Engine — Discovery Admin</title>
+  <link rel="stylesheet" href="/dashboard/assets/dashboard.css" />
+  <link rel="stylesheet" href="/admin/assets/discovery.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Local Growth Engine</div>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/admin/discovery" class="active">Discovery</a>
+    </nav>
+    <button id="logout" class="linklike" type="button">Log out</button>
+  </header>
+
+  <main>
+    <section class="page-head">
+      <h1>Lead discovery</h1>
+      <p class="muted">Start discovery jobs and watch them run. With no provider configured, jobs fail honestly with an exception — no fake data.</p>
+    </section>
+
+    <!-- Start a job -->
+    <section class="panel">
+      <h2>Start discovery job</h2>
+      <form id="start-form" class="start-form">
+        <label>Industry
+          <input id="f-industry" type="text" placeholder="plumbing" required maxlength="100" />
+        </label>
+        <label>State
+          <select id="f-state" required></select>
+        </label>
+        <label>City <span class="muted">(optional)</span>
+          <input id="f-city" type="text" placeholder="Austin" maxlength="100" />
+        </label>
+        <button type="submit" class="primary">Start Discovery Job</button>
+        <span id="start-msg" class="msg"></span>
+      </form>
+    </section>
+
+    <!-- Job list -->
+    <section class="panel">
+      <h2>Discovery jobs</h2>
+      <p class="muted">Most recent first. Retry appears for finished jobs; Cancel for active ones (cancel only lands between batches).</p>
+      <div class="table-wrap">
+        <table id="jobs-table">
+          <thead>
+            <tr>
+              <th>Status</th><th>Provider</th><th>Target</th><th>Att.</th>
+              <th>Fetched</th><th>Ingested</th><th>Dups</th><th>Invalid</th><th>Errors</th>
+              <th>Created</th><th>Started</th><th>Finished</th><th>Error</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="list-msg" class="msg"></p>
+    </section>
+
+    <!-- Job detail -->
+    <section id="detail" class="panel" hidden>
+      <h2>Job detail <span id="detail-id" class="mono"></span></h2>
+      <div id="detail-summary" class="detail-summary"></div>
+      <h3>Record errors</h3>
+      <div id="detail-errors" class="detail-errors"></div>
+      <h3>Ingested businesses (window estimate)</h3>
+      <div id="detail-businesses" class="detail-businesses"></div>
+    </section>
+  </main>
+
+  <footer class="foot muted">
+    Local Growth Engine · discovery admin (brief 8B) · jobs run asynchronously; progress reflects the real runner
+  </footer>
+
+  <script src="/admin/assets/discovery.js"></script>
+</body>
+</html>

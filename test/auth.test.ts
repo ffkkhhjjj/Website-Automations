@@ -183,7 +183,16 @@ describe('audit logging', () => {
     const rows = await db
       .select()
       .from(auditLogs)
-      .where(and(eq(auditLogs.source, 'auth'), eq(auditLogs.action, 'auth.login.success')))
+      .where(
+        and(
+          eq(auditLogs.source, 'auth'),
+          eq(auditLogs.action, 'auth.login.success'),
+          // Filter to THIS suite's owner: other test files create their own
+          // owners and log in against the same shared throwaway DB, so an
+          // unfiltered scan is order-dependent.
+          eq(auditLogs.actor_id, ctx.ownerId),
+        ),
+      )
       .limit(5);
     const found = rows.find((r) => r.entity_id === ctx.ownerId);
     expect(found).toBeTruthy();

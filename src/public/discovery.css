@@ -1,0 +1,51 @@
+/* Discovery admin — extends dashboard.css with discovery-specific layout. */
+.start-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 8px; }
+.start-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.start-form input, .start-form select {
+  min-width: 160px; padding: 7px 9px; border: 1px solid var(--line);
+  border-radius: 6px; font-size: 14px; background: #fff; color: var(--ink);
+}
+.start-form button {
+  padding: 8px 14px; border: 0; border-radius: 6px; cursor: pointer;
+  background: var(--line); color: var(--ink); font-size: 14px; font-weight: 600;
+}
+.start-form button.primary { background: var(--brand); color: #fff; }
+.start-form button:disabled { opacity: 0.6; cursor: default; }
+.start-form .msg { font-size: 13px; }
+.start-form .msg.ok { color: var(--ok); }
+.start-form .msg.err { color: var(--err); }
+
+.table-wrap { overflow-x: auto; margin-top: 10px; }
+#jobs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#jobs-table th, #jobs-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#jobs-table th { color: var(--muted); font-weight: 600; font-size: 12px; }
+#jobs-table td.num { font-variant-numeric: tabular-nums; }
+#jobs-table td .err-text { max-width: 260px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; color: var(--err); }
+#jobs-table td.actions button { margin-right: 6px; padding: 3px 10px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; }
+#jobs-table td.actions button.retry { color: var(--brand); }
+#jobs-table td.actions button.cancel { color: var(--err); }
+
+.badge.PENDING   { background: #eef1f5; color: var(--muted); }
+.badge.RUNNING   { background: #e0ecff; color: var(--brand); }
+.badge.COMPLETED { background: #e4f5ec; color: var(--ok); }
+.badge.PARTIAL   { background: #fef3e2; color: var(--warn); }
+.badge.FAILED    { background: #fee2e2; color: var(--err); }
+.badge.CANCELED  { background: #f1e8fd; color: #6d28d9; }
+
+#detail h3 { font-size: 14px; margin: 14px 0 6px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+.detail-summary { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0; font-size: 13px; }
+.detail-summary b { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+.detail-errors { display: grid; gap: 6px; }
+.err-row { display: flex; gap: 10px; align-items: baseline; border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.err-row.retryable { border-left-color: #d4a72c; }
+.err-row.fatal { border-left-color: var(--err); }
+.err-row .cat { min-width: 150px; color: var(--muted); font-size: 12px; }
+.err-row .msg { flex: 1; }
+.err-row .flag { font-size: 11px; font-weight: 700; }
+.detail-businesses { font-size: 13px; }
+.detail-businesses .note { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
+.detail-businesses ul { margin: 4px 0 0; padding-left: 18px; }
+.msg { font-size: 13px; }
+.msg.ok { color: var(--ok); }
+.msg.err { color: var(--err); }
