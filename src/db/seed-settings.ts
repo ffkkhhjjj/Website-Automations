@@ -188,7 +188,7 @@ const DEFAULT_SETTINGS: SeedSetting[] = [
     key: 'integrations.discovery.provider',
     value: 'none',
     type: 'string',
-    description: 'Discovery provider selection: "none" (default) or a future vendor id. Requires DISCOVERY_API_KEY in env.',
+    description: 'Discovery provider selection: "none" (default) or "google_places" (Google Places + Maps lead source). Requires DISCOVERY_API_KEY in env.',
     is_feature_flag: false,
   },
   {

@@ -474,6 +474,15 @@ interval in Settings to enable periodic ticks, which create + run jobs from
 `target.industries × target.states (× target.cities)` with the scheduler's own
 single-active-job guard and a silent skip while no provider is configured.
 
+### Google Places provider (`google_places`)
+The live lead source is `GooglePlacesProvider` (`src/discovery/providers-google.ts`,
+id `google_places`): Places API **Text Search** for `"<industry> in <city>, <state>"`
+with `next_page_token` pagination (max 3 pages, ~2s token delay), plus **Place Details**
+per result for website/phone/rating. Maps only fields actually returned;
+`external_id` = `place_id`, `source` = `google_maps`. To go live:
+1. set `DISCOVERY_API_KEY` in env (a Google Places API key);
+2. set `integrations.discovery.provider` to `google_places` in Settings;
+3. create a discovery job (`POST /api/discovery/jobs` or `/admin/discovery`).
 ### Wiring a real provider later (no fake integrations)
 
 1. Implement the `DiscoveryProvider` interface (`src/discovery/providers.ts`):

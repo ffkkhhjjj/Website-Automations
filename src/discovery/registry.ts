@@ -18,10 +18,21 @@
 import { settingsService } from '../config/singleton';
 import { DEFAULT_DISCOVERY_PROVIDER } from '../config/defaults';
 import { NoneProvider, DISCOVERY_ENV_VARS, DISCOVERY_PROVIDER_NONE } from './providers';
+import { GooglePlacesProvider, GOOGLE_PLACES_PROVIDER_ID } from './providers-google';
 import type { DiscoveryProvider } from './providers';
 
 /** Settings key for discovery provider selection. */
 export const DISCOVERY_SETTING_KEY = 'integrations.discovery.provider';
+
+/**
+ * Selectable provider factories: provider id (settings value) → constructor.
+ * NoneProvider stays the default; 'google_places' builds the real Google
+ * Places provider once DISCOVERY_API_KEY is present (gated by hasDiscoveryEnv
+ * in buildDiscoveryRegistry — no live calls happen without the key).
+ */
+export const SELECTABLE_PROVIDERS: Record<string, () => DiscoveryProvider> = {
+  [GOOGLE_PLACES_PROVIDER_ID]: () => new GooglePlacesProvider(),
+};
 
 /** Env credential presence check (same semantics as integrations registry). */
 export function hasDiscoveryEnv(): boolean {
@@ -50,6 +61,13 @@ interface Options {
   providerId?: string;
 }
 
+/** Default instance for a settings-selected provider id: a registered
+ *  SELECTABLE_PROVIDERS factory, else NoneProvider (unknown ids stay honest). */
+export function defaultInstanceFor(providerId: string): DiscoveryProvider {
+  const factory = SELECTABLE_PROVIDERS[providerId];
+  return factory ? factory() : new NoneProvider();
+}
+
 /**
  * Build the registry for the current settings value.
  *
@@ -68,7 +86,7 @@ export async function buildDiscoveryRegistry(opts: Options = {}): Promise<Discov
       (v): v is string => typeof v === 'string',
       DEFAULT_DISCOVERY_PROVIDER,
     ));
-  const instance = opts.providerInstance ?? new NoneProvider();
+  const instance = opts.providerInstance ?? defaultInstanceFor(providerId);
   // Both halves required: a non-"none" provider must be SELECTED (explicit
   // override wins over settings) and its env credential must be present. A
   // stub instance alone, with selection still on "none", stays unconfigured.
