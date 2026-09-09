@@ -10,6 +10,7 @@ export * from './types';
 export * from './normalize';
 export * from './dedup';
 export * from './providers';
+export * from './providers-google';
 export * from './registry';
 export * from './ingest';
 export * from './runner';
