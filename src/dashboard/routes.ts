@@ -30,6 +30,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** Route prefixes (exported for tests + README). */
 export const DASHBOARD_API_ROUTE = '/api/dashboard/overview';
 export const DASHBOARD_PAGE_ROUTE = '/dashboard';
+/** Operating console (working-dashboard brief): SPA shell + assets + deep links. */
+export const CONSOLE_PAGE_ROUTE = '/console';
 
 export interface RegisterDashboardRoutesOptions {
   authConfig?: AuthConfig;
@@ -86,6 +88,31 @@ export async function registerDashboardRoutes(
   app.get('/dashboard/auth/login', async (_req, reply) => {
     const { readFile } = await import('node:fs/promises');
     const html = await readFile(join(publicDir, 'login.html'), 'utf8');
+    return reply.type('text/html; charset=utf-8').send(html);
+  });
+
+  // --- Operating console: SPA shell + assets + deep-link fallback -------------
+  // Public shells like /dashboard: the HTML/CSS/JS carry no business data; every
+  // payload is fetched with the owner's JWT from the authenticated APIs.
+  app.register(async (staticApp) => {
+    const fastifyStatic = (await import('@fastify/static')).default;
+    await staticApp.register(fastifyStatic, {
+      root: publicDir,
+      prefix: '/console/assets/',
+      decorateReply: false,
+    });
+  });
+  app.get(CONSOLE_PAGE_ROUTE, async (_req, reply) => {
+    const { readFile } = await import('node:fs/promises');
+    const html = await readFile(join(publicDir, 'console.html'), 'utf8');
+    return reply.type('text/html; charset=utf-8').send(html);
+  });
+  // SPA fallback: any /console/* deep link (/console/leads, /console/leads/:id,
+  // …) serves the shell; the client router decides the view. Static asset
+  // routes above win for /console/assets/*.
+  app.get(`${CONSOLE_PAGE_ROUTE}/*`, async (_req, reply) => {
+    const { readFile } = await import('node:fs/promises');
+    const html = await readFile(join(publicDir, 'console.html'), 'utf8');
     return reply.type('text/html; charset=utf-8').send(html);
   });
 }

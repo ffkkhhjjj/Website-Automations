@@ -160,6 +160,13 @@
         cancel.addEventListener('click', function () { act(JOBS_URL + '/' + job.id + '/cancel', cancel, refresh); });
         actTd.appendChild(cancel);
       }
+      if (job.status === 'COMPLETED') {
+        var leads = el('a', 'btn-link', 'View leads');
+        leads.href = '/console/leads?industry=' + encodeURIComponent(job.industry) +
+          '&state=' + encodeURIComponent(job.state) +
+          (job.city ? '&city=' + encodeURIComponent(job.city) : '');
+        actTd.appendChild(leads);
+      }
       var view = el('button', '', 'Detail');
       view.type = 'button';
       view.addEventListener('click', function () { loadDetail(job.id); });

@@ -17,7 +17,7 @@
 import 'dotenv/config';
 import { buildAuthApp } from './auth/client';
 import { registerConfigRoutes, CONFIG_ROUTE_PREFIX } from './config/routes';
-import { registerDashboardRoutes, DASHBOARD_API_ROUTE, DASHBOARD_PAGE_ROUTE } from './dashboard/routes';
+import { registerDashboardRoutes, DASHBOARD_API_ROUTE, DASHBOARD_PAGE_ROUTE, CONSOLE_PAGE_ROUTE } from './dashboard/routes';
 import { registerIntegrationsRoutes, INTEGRATIONS_STATUS_ROUTE } from './integrations/routes';
 import {
   registerBusinessesRoutes,
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   console.log(`[start] Local Growth Engine API listening on :${port}`);
   console.log(
     `[start] routes: /auth/*  ${CONFIG_ROUTE_PREFIX} (GET), ${CONFIG_ROUTE_PREFIX}/:key (PUT)` +
-      `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)` +
+      `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)  ${CONSOLE_PAGE_ROUTE} (GET)` +
       `  ${INTEGRATIONS_STATUS_ROUTE} (GET)` +
       `  ${DISCOVERY_JOBS_ROUTE} (GET/POST)  ${DISCOVERY_PAGE_ROUTE} (GET)` +
       `  ${BUSINESSES_ROUTE} (GET)  ${BUSINESS_LIFECYCLE_ROUTE} (POST)` +
