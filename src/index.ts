@@ -20,6 +20,11 @@ import { registerConfigRoutes, CONFIG_ROUTE_PREFIX } from './config/routes';
 import { registerDashboardRoutes, DASHBOARD_API_ROUTE, DASHBOARD_PAGE_ROUTE } from './dashboard/routes';
 import { registerIntegrationsRoutes, INTEGRATIONS_STATUS_ROUTE } from './integrations/routes';
 import {
+  registerBusinessesRoutes,
+  BUSINESSES_ROUTE,
+  BUSINESS_LIFECYCLE_ROUTE,
+} from './businesses/routes';
+import {
   registerDiscoveryRoutes,
   DISCOVERY_JOBS_ROUTE,
 } from './discovery/routes';
@@ -61,6 +66,9 @@ async function main(): Promise<void> {
   await registerDiscoveryRoutes(app);
   await registerDiscoveryAdminRoutes(app);
 
+  // Leads console: list/detail reads + one guarded lifecycle write.
+  await registerBusinessesRoutes(app);
+
   // Website analysis API (fetch + analyze core — this brief).
   await registerWebsiteAnalysisRoutes(app);
 
@@ -89,6 +97,7 @@ async function main(): Promise<void> {
       `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)` +
       `  ${INTEGRATIONS_STATUS_ROUTE} (GET)` +
       `  ${DISCOVERY_JOBS_ROUTE} (GET/POST)  ${DISCOVERY_PAGE_ROUTE} (GET)` +
+      `  ${BUSINESSES_ROUTE} (GET)  ${BUSINESS_LIFECYCLE_ROUTE} (POST)` +
       `  ${ANALYZE_WEBSITE_ROUTE} (POST)  ${REANALYZE_WEBSITE_ROUTE} (POST)`,
   );
 }
