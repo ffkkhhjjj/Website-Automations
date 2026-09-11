@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Growth Engine — Console</title>
+  <link rel="stylesheet" href="/console/assets/console.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">Local Growth Engine</div>
+      <nav id="nav" class="nav">
+        <a href="/console" data-view="overview">Overview</a>
+        <a href="/console/leads" data-view="leads">Leads</a>
+        <a href="/console/discovery" data-view="discovery">Discovery</a>
+        <a href="/console/exceptions" data-view="exceptions">Exceptions</a>
+        <a href="/console/settings" data-view="settings">Settings</a>
+        <a href="/console/integrations" data-view="integrations">Integrations</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="me" class="me"></div>
+        <button id="logout" class="linklike" type="button">Log out</button>
+      </div>
+    </aside>
+    <main id="view" class="view" tabindex="-1"></main>
+  </div>
+  <script src="/console/assets/console.js"></script>
+</body>
+</html>

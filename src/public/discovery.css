@@ -49,3 +49,10 @@
 .msg { font-size: 13px; }
 .msg.ok { color: var(--ok); }
 .msg.err { color: var(--err); }
+/* Console cross-navigation: "View leads" link inside job actions. */
+#jobs-table td.actions a.btn-link {
+  display: inline-block; margin-right: 6px; padding: 3px 10px; font-size: 12px;
+  border: 1px solid var(--brand); border-radius: 6px; background: #fff;
+  color: var(--brand); text-decoration: none; cursor: pointer;
+}
+#jobs-table td.actions a.btn-link:hover { background: var(--brand); color: #fff; }

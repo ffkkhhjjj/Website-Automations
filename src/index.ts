@@ -17,8 +17,13 @@
 import 'dotenv/config';
 import { buildAuthApp } from './auth/client';
 import { registerConfigRoutes, CONFIG_ROUTE_PREFIX } from './config/routes';
-import { registerDashboardRoutes, DASHBOARD_API_ROUTE, DASHBOARD_PAGE_ROUTE } from './dashboard/routes';
+import { registerDashboardRoutes, DASHBOARD_API_ROUTE, DASHBOARD_PAGE_ROUTE, CONSOLE_PAGE_ROUTE } from './dashboard/routes';
 import { registerIntegrationsRoutes, INTEGRATIONS_STATUS_ROUTE } from './integrations/routes';
+import {
+  registerBusinessesRoutes,
+  BUSINESSES_ROUTE,
+  BUSINESS_LIFECYCLE_ROUTE,
+} from './businesses/routes';
 import {
   registerDiscoveryRoutes,
   DISCOVERY_JOBS_ROUTE,
@@ -61,6 +66,9 @@ async function main(): Promise<void> {
   await registerDiscoveryRoutes(app);
   await registerDiscoveryAdminRoutes(app);
 
+  // Leads console: list/detail reads + one guarded lifecycle write.
+  await registerBusinessesRoutes(app);
+
   // Website analysis API (fetch + analyze core — this brief).
   await registerWebsiteAnalysisRoutes(app);
 
@@ -86,9 +94,10 @@ async function main(): Promise<void> {
   console.log(`[start] Local Growth Engine API listening on :${port}`);
   console.log(
     `[start] routes: /auth/*  ${CONFIG_ROUTE_PREFIX} (GET), ${CONFIG_ROUTE_PREFIX}/:key (PUT)` +
-      `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)` +
+      `  ${DASHBOARD_API_ROUTE} (GET)  ${DASHBOARD_PAGE_ROUTE} (GET)  ${CONSOLE_PAGE_ROUTE} (GET)` +
       `  ${INTEGRATIONS_STATUS_ROUTE} (GET)` +
       `  ${DISCOVERY_JOBS_ROUTE} (GET/POST)  ${DISCOVERY_PAGE_ROUTE} (GET)` +
+      `  ${BUSINESSES_ROUTE} (GET)  ${BUSINESS_LIFECYCLE_ROUTE} (POST)` +
       `  ${ANALYZE_WEBSITE_ROUTE} (POST)  ${REANALYZE_WEBSITE_ROUTE} (POST)`,
   );
 }

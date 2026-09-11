@@ -42,7 +42,7 @@
             return;
           }
           localStorage.setItem(TOKEN_KEY, data.access_token);
-          window.location.href = '/dashboard';
+          window.location.href = '/console';
         } catch (e) {
           errBox.textContent = 'Could not reach the login service: ' + e.message;
           errBox.hidden = false;
