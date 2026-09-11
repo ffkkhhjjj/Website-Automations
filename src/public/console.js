@@ -158,10 +158,13 @@
     view.appendChild(el('p', 'muted', 'Nothing is wired at this path yet.'));
   }
 
-  /** Render a "loading" placeholder, then run the view (which may be async). */
+  /** Render a "loading" placeholder, then run the view (which may be async).
+   * The view function always receives `view` — most renderers are passed as
+   * bare references (e.g. bootView(view, renderLeads)) and relied on this
+   * argument; without it their first appendChild threw. */
   function bootView(view, fn) {
     view.appendChild(el('p', 'muted', 'Loading…'));
-    Promise.resolve().then(function () { return fn(); }).catch(function (e) {
+    Promise.resolve().then(function () { return fn(view); }).catch(function (e) {
       showError('Could not load this view: ' + e.message);
     });
   }
